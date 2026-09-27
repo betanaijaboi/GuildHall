@@ -130,3 +130,28 @@ export function FeedbackKeyForm({ action, endpoint }: { action: Action; endpoint
     </form>
   );
 }
+
+export function DiscordCodeForm({ action }: { action: Action }) {
+  const [state, submit, pending] = useActionState(action, {});
+  return (
+    <form action={submit} className="space-y-3">
+      <button className="btn-secondary" disabled={pending}><KeyRound size={15} /> Get a link code</button>
+      {state.secret && <CopyBox value={`/guildhall link code:${state.secret}`} hint="Run this in your Discord server as an admin. The code works once and expires in 30 minutes." />}
+    </form>
+  );
+}
+
+export function DiscordWebhookForm({ action, channels }: { action: Action; channels: { id: string; name: string }[] }) {
+  const [state, submit, pending] = useActionState(action, {});
+  return (
+    <form action={submit} className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        <select name="channelId" className="input w-auto" aria-label="Guildhall channel">{channels.map((c) => <option key={c.id} value={c.id}>#{c.name}</option>)}</select>
+        <input name="url" required autoComplete="off" placeholder="https://discord.com/api/webhooks/…" className="input min-w-0 flex-1 font-mono text-xs" aria-label="Discord webhook URL" />
+        <button className="btn-secondary" disabled={pending}><Link2 size={15} /> {pending ? "Checking…" : "Mirror"}</button>
+      </div>
+      {state.error && <p className="text-sm text-bad">{state.error}</p>}
+      {state.message && <p className="animate-pop text-sm text-good">{state.message}</p>}
+    </form>
+  );
+}

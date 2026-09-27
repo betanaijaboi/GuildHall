@@ -1023,3 +1023,30 @@ export const moodboardItems = pgTable(
   },
   (t) => [index("moodboard_items_board_idx").on(t.boardId, t.createdAt), uniqueIndex("moodboard_items_portfolio_idx").on(t.boardId, t.portfolioItemId)],
 );
+
+// --- Discord bridge (C21) --------------------------------------------------------------------------------
+
+/** A Discord server linked to a project (slash commands there act on this project). */
+export const discordLinks = pgTable("discord_links", {
+  projectId: uuid("project_id").primaryKey().references(() => projects.id, { onDelete: "cascade" }),
+  guildId: text("guild_id").notNull().unique(),
+  guildName: text("guild_name").notNull().default(""),
+  linkedBy: text("linked_by").notNull().default(""),
+  createdAt: createdAt(),
+});
+
+export const discordLinkCodes = pgTable("discord_link_codes", {
+  codeHash: text("code_hash").primaryKey(),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+
+/** Mirror a Guildhall channel into Discord through a channel webhook. The URL is a secret; never shown again. */
+export const discordWebhooks = pgTable("discord_webhooks", {
+  channelId: uuid("channel_id").primaryKey().references(() => channels.id, { onDelete: "cascade" }),
+  webhookUrl: text("webhook_url").notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  lastError: text("last_error"),
+  lastSentAt: timestamp("last_sent_at", { withTimezone: true }),
+  createdAt: createdAt(),
+});

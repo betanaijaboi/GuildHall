@@ -13,6 +13,13 @@ export type ChannelEvent = { type: "message"; messageId: string; threadRootId: s
 
 export function publish(channelId: string, event: ChannelEvent): void {
   bus.emit(`channel:${channelId}`, event);
+  bus.emit("channel:*", channelId, event);
+}
+
+/** Every channel event (server-side integrations such as the Discord mirror). */
+export function subscribeAll(fn: (channelId: string, e: ChannelEvent) => void): () => void {
+  bus.on("channel:*", fn);
+  return () => bus.off("channel:*", fn);
 }
 
 export function subscribe(channelId: string, fn: (e: ChannelEvent) => void): () => void {

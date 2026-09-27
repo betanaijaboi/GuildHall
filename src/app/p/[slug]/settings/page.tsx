@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { Bot, ChevronRight, ShieldCheck } from "lucide-react";
+import { Bot, ChevronRight, MessageCircle, ShieldCheck } from "lucide-react";
 import { openAgentSetupPullRequest } from "@/app/actions/agent";
 import Link from "next/link";
 import { db } from "@/db";
@@ -46,6 +46,14 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
         <span className="flex-1">
           <span className="block font-medium">Guests &amp; shared channels</span>
           <span className="block text-sm text-fg-muted">Invite a publisher or outsourcer to chosen channels and assets, or share a channel with a partner studio.</span>
+        </span>
+        <ChevronRight size={18} className="text-fg-muted" />
+      </Link>
+      <Link href={`/p/${slug}/settings/discord`} className="card card-hover flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#5865F2]/20 text-[#8891f7]"><MessageCircle size={20} /></span>
+        <span className="flex-1">
+          <span className="block font-medium">Discord</span>
+          <span className="block text-sm text-fg-muted">Mirror channels into your Discord, and let your community send bugs and ideas with slash commands.</span>
         </span>
         <ChevronRight size={18} className="text-fg-muted" />
       </Link>

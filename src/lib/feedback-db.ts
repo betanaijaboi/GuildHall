@@ -45,7 +45,7 @@ async function announce(db: Db, r: Report, notify: Notify) {
       channelId: general.id,
       authorId: null,
       threadKey: r.playtestId ? `playtest:${r.playtestId}` : "feedback:sdk",
-      body: `${KIND_ICON[r.kind]} New ${r.kind === "feedback" ? "player feedback" : r.kind}${r.source === "sdk" ? " from the in-game reporter" : ""}: ${r.title}${r.reporterName ? ` (${r.reporterName})` : ""}`,
+      body: `${KIND_ICON[r.kind]} New ${r.kind === "feedback" ? "player feedback" : r.kind}${r.source === "sdk" ? " from the in-game reporter" : r.source === "discord" ? " from Discord" : ""}: ${r.title}${r.reporterName ? ` (${r.reporterName})` : ""}`,
     },
     notify,
   );
@@ -84,14 +84,14 @@ export async function submitPlaytestFeedback(
 export async function ingestSdkReport(
   db: Db,
   projectId: string,
-  input: { kind: "bug" | "feedback" | "idea"; title: string; description: string; build: string; platform: string; player: string; screenshotKey?: string; screenshotMime?: string },
+  input: { kind: "bug" | "feedback" | "idea"; title: string; description: string; build: string; platform: string; player: string; screenshotKey?: string; screenshotMime?: string; source?: "sdk" | "discord" },
   notify: Notify = publish,
 ): Promise<Report> {
   const [r] = await db
     .insert(feedbackReports)
     .values({
       projectId,
-      source: "sdk",
+      source: input.source ?? "sdk",
       kind: input.kind,
       reporterName: input.player,
       title: input.title,
