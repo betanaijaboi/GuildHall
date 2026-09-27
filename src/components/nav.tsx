@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderKanban, Home, Plus, Sparkles, Store, Users } from "lucide-react";
+import { FolderKanban, Home, Layers, Plus, Sparkles, Store, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -10,11 +10,12 @@ const LINKS = [
   { href: "/gigs", label: "Gigs", icon: Store },
 ];
 
-export function NavLinks() {
+export function NavLinks({ signedIn }: { signedIn: boolean }) {
   const path = usePathname();
+  const links = signedIn ? [{ href: "/hand", label: "Your hand", icon: Layers }, ...LINKS] : LINKS;
   return (
     <div className="hidden items-center gap-1 md:flex">
-      {LINKS.map(({ href, label, icon: Icon }) => {
+      {links.map(({ href, label, icon: Icon }) => {
         const active = path.startsWith(href);
         return (
           <Link
@@ -36,7 +37,9 @@ export function NavLinks() {
 export function MobileTabBar({ handle }: { handle: string | null }) {
   const path = usePathname();
   const tabs = [
-    { href: "/", label: "Home", icon: Home, match: (p: string) => p === "/" },
+    handle
+      ? { href: "/hand", label: "Hand", icon: Layers, match: (p: string) => p === "/hand" }
+      : { href: "/", label: "Home", icon: Home, match: (p: string) => p === "/" },
     { href: "/people", label: "People", icon: Users, match: (p: string) => p.startsWith("/people") && !p.startsWith(`/people/${handle}`) },
     { href: handle ? "/projects/new" : "/login", label: "Create", icon: Plus, match: (p: string) => p === "/projects/new", primary: true },
     { href: "/projects", label: "Projects", icon: FolderKanban, match: (p: string) => p.startsWith("/projects") && p !== "/projects/new" || p.startsWith("/p/") },

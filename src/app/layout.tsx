@@ -29,7 +29,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Link href="/" aria-label="Guildhall home">
               <Logo />
             </Link>
-            <NavLinks />
+            <NavLinks signedIn={!!user} />
             <div className="ml-auto flex items-center gap-2">
               {user ? (
                 <>

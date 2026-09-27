@@ -646,3 +646,16 @@ export const gddLinks = pgTable(
   },
   (t) => [primaryKey({ columns: [t.pageId, t.targetType, t.targetId] })],
 );
+
+// --- Your hand (C19) -----------------------------------------------------------------------------
+
+/** A person's own ordering of their cross-project queue. Items missing here sort by priority. */
+export const handOrder = pgTable(
+  "hand_order",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    itemKey: text("item_key").notNull(),
+    position: integer("position").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.itemKey] })],
+);
