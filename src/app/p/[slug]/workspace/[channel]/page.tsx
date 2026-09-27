@@ -1,18 +1,21 @@
-import { and, asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, max } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { channels, messages, users } from "@/db/schema";
+import { channels, messages, messageVotes, projectRepos, users } from "@/db/schema";
+import { ForumBoard, TopicHeader, type TopicCard } from "@/components/forum";
+import { sortTopics, type TopicSort } from "@/lib/forum";
 import { sendMessage } from "@/app/actions/workspace";
-import { Hash, Rocket, X } from "lucide-react";
+import { Hash, MessagesSquare, Rocket, X } from "lucide-react";
 import { Avatar, BotAvatar } from "@/components/avatar";
 import { GithubIcon } from "@/components/icons";
 import { ChatComposer } from "@/components/chat-composer";
 import { LiveRefresh } from "@/components/live-refresh";
 import { MessageCardView } from "@/components/message-card";
-import { loadProject } from "@/lib/access";
-import { DEFAULT_CHANNELS } from "@/lib/messages";
+import { loadProject, roleAtLeast } from "@/lib/access";
+import { createDefaultChannels, DEFAULT_CHANNELS } from "@/lib/messages";
 import { requireUser } from "@/lib/auth";
+import { githubConfigured } from "@/lib/env";
 
 type Row = { message: typeof messages.$inferSelect; author: typeof users.$inferSelect | null };
 
@@ -21,12 +24,14 @@ export default async function ChannelPage({
   searchParams,
 }: {
   params: Promise<{ slug: string; channel: string }>;
-  searchParams: Promise<{ thread?: string }>;
+  searchParams: Promise<{ thread?: string; tag?: string; status?: string; sort?: string }>;
 }) {
   const { slug, channel: channelName } = await params;
-  const { thread } = await searchParams;
+  const { thread, tag, status, sort: sortParam } = await searchParams;
   const user = await requireUser();
-  const { project } = await loadProject(slug, user, "guest");
+  const { project, role } = await loadProject(slug, user, "guest");
+  // Projects created before a default channel existed (e.g. #proposals) get it on first visit.
+  await createDefaultChannels(db, project.id);
 
   const order = (name: string) => { const i = DEFAULT_CHANNELS.findIndex((c) => c.name === name); return i < 0 ? 99 : i; };
   const allChannels = (await db.select().from(channels).where(eq(channels.projectId, project.id)).orderBy(asc(channels.createdAt))).sort((a, b) => order(a.name) - order(b.name));
@@ -41,7 +46,7 @@ export default async function ChannelPage({
       .leftJoin(users, eq(users.id, messages.authorId))
       .where(and(eq(messages.channelId, channel.id), isNull(messages.threadRootId)))
       .orderBy(desc(messages.createdAt))
-      .limit(100)
+      .limit(channel.kind === "forum" ? 300 : 100)
   ).reverse();
   const replyCounts = roots.length
     ? await db
@@ -51,6 +56,42 @@ export default async function ChannelPage({
         .groupBy(messages.threadRootId)
     : [];
   const repliesOf = new Map(replyCounts.map((r) => [r.root, r.n]));
+
+  // Forum channels (C13): topics with votes, status and tags instead of a chat stream.
+  let topics: TopicCard[] = [];
+  let hasRepo = false;
+  const sort: TopicSort = sortParam === "new" || sortParam === "active" ? sortParam : "votes";
+  if (channel.kind === "forum" && roots.length) {
+    const ids = roots.map((r) => r.message.id);
+    const [votes, mine, last, repo] = await Promise.all([
+      db.select({ id: messageVotes.messageId, n: count() }).from(messageVotes).where(inArray(messageVotes.messageId, ids)).groupBy(messageVotes.messageId),
+      db.select({ id: messageVotes.messageId }).from(messageVotes).where(and(inArray(messageVotes.messageId, ids), eq(messageVotes.userId, user.id))),
+      db.select({ root: messages.threadRootId, at: max(messages.createdAt) }).from(messages).where(inArray(messages.threadRootId, ids)).groupBy(messages.threadRootId),
+      db.select({ id: projectRepos.repoId }).from(projectRepos).where(eq(projectRepos.projectId, project.id)).limit(1),
+    ]);
+    hasRepo = repo.length > 0 && githubConfigured();
+    const voteMap = new Map(votes.map((v) => [v.id, v.n]));
+    const mineSet = new Set(mine.map((m) => m.id));
+    const lastMap = new Map(last.map((l) => [l.root, l.at]));
+    topics = roots
+      .filter((r) => r.message.title)
+      .map((r) => ({
+        id: r.message.id,
+        title: r.message.title!,
+        body: r.message.body,
+        tags: r.message.tags ?? [],
+        status: r.message.topicStatus ?? "open",
+        votes: voteMap.get(r.message.id) ?? 0,
+        votedByMe: mineSet.has(r.message.id),
+        replies: repliesOf.get(r.message.id) ?? 0,
+        createdAt: r.message.createdAt,
+        lastActivity: lastMap.get(r.message.id) ?? r.message.createdAt,
+        author: r.author,
+        convertedTaskId: r.message.convertedTaskId,
+        convertedUrl: r.message.convertedUrl,
+      }));
+  }
+  const shownTopics = sortTopics(topics.filter((t) => (!tag || t.tags.includes(tag)) && (!status || t.status === status)), sort);
 
   const threadRoot = thread && /^[0-9a-f-]{36}$/.test(thread)
     ? (await db
@@ -99,8 +140,13 @@ export default async function ChannelPage({
           <ChannelIcon name={channel.name} kind={channel.kind} />
           <span className="font-display font-semibold">{channel.name}</span>
           {channel.kind === "github" && <span className="text-xs text-fg-muted">activity from linked repos</span>}
+          {channel.kind === "forum" && <span className="text-xs text-fg-muted">proposals and ideas, voted by the party</span>}
           <span className="ml-auto flex items-center gap-2 text-xs text-fg-muted"><span className="live-dot" /> Live</span>
         </div>
+        {channel.kind === "forum" ? (
+          <ForumBoard slug={slug} channel={channel} topics={shownTopics} filters={{ tag, status, sort }} />
+        ) : (
+        <>
         <ol className="flex-1 space-y-1 overflow-y-auto p-3">
           {roots.length === 0 && (
             <li className="flex flex-col items-center gap-2 py-16 text-center text-sm text-fg-muted">
@@ -119,14 +165,25 @@ export default async function ChannelPage({
         <div className="border-t border-border p-3">
           <ChatComposer action={send} channelId={channel.id} placeholder={`Message #${channel.name}`} />
         </div>
+        </>
+        )}
       </section>
 
       {threadRoot && (
         <section className="card flex animate-fade-up flex-col p-0">
           <div className="flex items-center border-b border-border px-5 py-3 font-display font-semibold">
-            Thread
+            {channel.kind === "forum" ? "Topic" : "Thread"}
             <Link href={base} className="btn-ghost ml-auto" aria-label="Close thread"><X size={16} /></Link>
           </div>
+          {channel.kind === "forum" && topics.find((t) => t.id === threadRoot.message.id) && (
+            <TopicHeader
+              slug={slug}
+              topic={topics.find((t) => t.id === threadRoot.message.id)!}
+              canLead={roleAtLeast(role, "lead")}
+              canWork={roleAtLeast(role, "member")}
+              hasRepo={hasRepo}
+            />
+          )}
           <ol className="flex-1 space-y-1 overflow-y-auto p-3">
             <MessageRow row={threadRoot} />
             {threadReplies.map((r) => <MessageRow key={r.message.id} row={r} />)}
@@ -164,6 +221,7 @@ function MessageRow({ row, children }: { row: Row; children?: React.ReactNode })
 
 function ChannelIcon({ name, kind }: { name: string; kind: string }) {
   if (kind === "github") return <GithubIcon size={15} />;
+  if (kind === "forum") return <MessagesSquare size={15} />;
   if (name === "builds") return <Rocket size={15} />;
   return <Hash size={15} />;
 }

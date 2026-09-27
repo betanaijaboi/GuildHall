@@ -35,7 +35,8 @@ export const visibilityEnum = pgEnum("visibility", ["public", "private"]);
 export const memberRoleEnum = pgEnum("member_role", ["owner", "lead", "member", "contractor", "guest"]);
 export const listingStatusEnum = pgEnum("listing_status", ["open", "filled", "closed"]);
 export const applicationStatusEnum = pgEnum("application_status", ["pending", "accepted", "declined"]);
-export const channelKindEnum = pgEnum("channel_kind", ["chat", "github"]);
+export const channelKindEnum = pgEnum("channel_kind", ["chat", "github", "forum"]);
+export const topicStatusEnum = pgEnum("topic_status", ["open", "accepted", "parked", "done"]);
 export const taskStatusEnum = pgEnum("task_status", ["todo", "doing", "done"]);
 export const postVisibilityEnum = pgEnum("post_visibility", ["team", "public"]);
 
@@ -174,6 +175,12 @@ export const messages = pgTable(
     card: jsonb("card").$type<MessageCard>(),
     // Stable key for bot messages that should be threaded together, e.g. "pr:123:7".
     threadKey: text("thread_key"),
+    /** Forum topics (C13): root messages in forum channels carry a title, tags and a status. */
+    title: text("title"),
+    tags: text("tags").array(),
+    topicStatus: topicStatusEnum("topic_status"),
+    convertedTaskId: uuid("converted_task_id"),
+    convertedUrl: text("converted_url"),
     createdAt: createdAt(),
   },
   (t) => [
@@ -591,4 +598,16 @@ export const rateReports = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.skillId] }), index("rate_reports_skill_idx").on(t.skillId)],
+);
+
+// --- Forum votes (C13) -------------------------------------------------------------------------
+
+export const messageVotes = pgTable(
+  "message_votes",
+  {
+    messageId: uuid("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.messageId, t.userId] })],
 );

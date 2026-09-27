@@ -14,7 +14,7 @@ import { templateById } from "../src/lib/pipelines";
 const url = process.env.DATABASE_URL ?? "postgres://guildhall:guildhall@localhost:5432/guildhall";
 const client = postgres(url, { max: 1, onnotice: () => {} });
 const db = drizzle(client, { schema });
-const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits } = schema;
+const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes } = schema;
 
 await client`truncate users, projects, github_installations, github_deliveries restart identity cascade`;
 
@@ -131,6 +131,15 @@ const hooks: [string, Record<string, unknown>][] = [
 ];
 let n = 0;
 for (const [event, payload] of hooks) await applyWebhook(db, `seed-${++n}`, event, payload);
+
+// Forum proposals on Tidebound.
+const proposals = (await channelByName(db, tide.id, "proposals"))!;
+const [p1, p2] = await db.insert(messages).values([
+  { channelId: proposals.id, authorId: ids.mei, title: "Tides that flood the low districts at night", body: "Night voyages raise the tide: low harbour streets flood, opening boat-only shortcuts and closing some shops.", tags: ["mechanic", "level"], topicStatus: "open" },
+  { channelId: proposals.id, authorId: ids.kwame, title: "Crew morale shown as a sea shanty that changes key", body: "Instead of a meter, the ambient shanty shifts from major to minor as morale drops. Needs audio!", tags: ["audio", "ui", "needs-art"], topicStatus: "accepted" },
+  { channelId: proposals.id, authorId: ids.amara, title: "Cut the fishing minigame from the slice", body: "It's fun but not core. Park it for after the vertical slice.", tags: ["scope"], topicStatus: "parked" },
+]).returning();
+await db.insert(messageVotes).values([{ messageId: p1.id, userId: ids.amara }, { messageId: p1.id, userId: ids.kwame }, { messageId: p2.id, userId: ids.mei }]);
 
 // Asset pipelines on Tidebound.
 for (const [name, templateId, done, owners] of [

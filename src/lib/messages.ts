@@ -5,8 +5,9 @@ import { publish, type ChannelEvent } from "./pubsub";
 
 export type Notify = (channelId: string, event: ChannelEvent) => void;
 
-export const DEFAULT_CHANNELS: { name: string; kind: "chat" | "github" }[] = [
+export const DEFAULT_CHANNELS: { name: string; kind: "chat" | "github" | "forum" }[] = [
   { name: "general", kind: "chat" },
+  { name: "proposals", kind: "forum" },
   { name: "design", kind: "chat" },
   { name: "art", kind: "chat" },
   { name: "code", kind: "chat" },
