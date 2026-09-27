@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { githubInstallations, projectRepos } from "@/db/schema";
 import { linkRepo, openSetupPullRequest, unlinkRepo } from "@/app/actions/github";
 import { updateProject } from "@/app/actions/project";
+import { generateCreditsNow } from "@/app/actions/credits";
 import { CheckboxRow } from "@/components/skill-picker";
 import { loadProject } from "@/lib/access";
 import { requireUser } from "@/lib/auth";
@@ -67,6 +68,12 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
         </div>
         <button className="btn">Save</button>
       </form>
+
+      <section className="card space-y-3">
+        <h2 className="h2">Credits</h2>
+        <p className="text-sm text-fg-muted">Everyone on the roster gets a verified credit on their profile, and a CREDITS.md PR is opened on the linked repo. This happens automatically when the project reaches Launch.</p>
+        <form action={generateCreditsNow.bind(null, slug)}><button className="btn-secondary">Generate verified credits now</button></form>
+      </section>
 
       <section className="card space-y-4">
         <h2 className="h2">GitHub repositories</h2>

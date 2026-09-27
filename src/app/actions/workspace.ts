@@ -12,6 +12,7 @@ import { loadDigest } from "@/lib/digest";
 import { channelByName, postMessage } from "@/lib/messages";
 import { milestoneFor, nextStage } from "@/lib/milestones";
 import { announceStageDone, stageTasks } from "@/lib/pipeline-db";
+import { generateProjectCredits } from "@/lib/credits-db";
 import { isStageLocked } from "@/lib/pipelines";
 
 // --- Chat -----------------------------------------------------------------------------------
@@ -137,6 +138,13 @@ export async function completeMilestone(slug: string, form: FormData): Promise<v
       authorId: null,
       body: `Milestone reached: ${m.title}.${next ? ` On to ${milestoneFor(next).title}!` : ""}`,
     });
+  }
+  // Reaching launch verifies everyone's credit on the game.
+  if (next === "launch") {
+    const result = await generateProjectCredits(db, project.id);
+    if (general) {
+      await postMessage(db, { channelId: general.id, authorId: null, body: `🎬 Launch! Verified credits added for ${result.count} people.${result.pr ? ` CREDITS.md PR: ${result.pr}` : ""}` });
+    }
   }
   revalidatePath(`/p/${slug}`, "layout");
   redirect(`/p/${slug}/milestones?celebrate=1`);

@@ -10,6 +10,7 @@ export type RankInputs = {
   paidMilestones: number;
   pipelineStages: number;
   endorsements: number;
+  credits: number;
   reviewRatings: number[];
 };
 
@@ -29,6 +30,7 @@ const RULES = [
   { key: "paidMilestones", label: "Paid milestones delivered", each: 25, cap: 500 },
   { key: "pipelineStages", label: "Pipeline stages completed", each: 5, cap: 200 },
   { key: "endorsements", label: "Skill endorsements from teammates", each: 10, cap: 200 },
+  { key: "credits", label: "Verified or confirmed shipped credits", each: 20, cap: 200 },
 ] as const;
 
 export type RankLine = { label: string; count: number; points: number; rule: string };
@@ -54,4 +56,4 @@ export function computeRank(inputs: RankInputs) {
   return { points, rank, next, progress, lines, avgRating };
 }
 
-export const EMPTY_INPUTS: RankInputs = { mergedPrs: 0, approvedAssets: 0, paidMilestones: 0, pipelineStages: 0, endorsements: 0, reviewRatings: [] };
+export const EMPTY_INPUTS: RankInputs = { mergedPrs: 0, approvedAssets: 0, paidMilestones: 0, pipelineStages: 0, endorsements: 0, credits: 0, reviewRatings: [] };

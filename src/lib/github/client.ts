@@ -54,20 +54,19 @@ export async function removeCollaborator(installationId: number, fullName: strin
   await octokit.rest.repos.removeCollaborator({ ...splitName(fullName), username: login });
 }
 
-/**
- * Commit `files` to a new branch as a single commit and open a PR against the default branch.
- * Returns the PR URL. Uses the Git Data API so the whole template lands in one reviewable commit.
- */
-export async function openTemplatePullRequest(
+export type PullRequestSpec = { branchPrefix: string; commitMessage: string; title: string; body: string };
+
+/** Commit `files` to a new branch as one commit and open a PR against the default branch. Returns the PR URL. */
+export async function openFilesPullRequest(
   installationId: number,
   fullName: string,
   defaultBranch: string,
   files: TemplateFile[],
+  spec: PullRequestSpec,
 ): Promise<string> {
   const octokit = await installationClient(installationId);
   const { owner, repo } = splitName(fullName);
-  const branch = `guildhall/setup-${Date.now()}`;
-
+  const branch = `${spec.branchPrefix}-${Date.now()}`;
   const { data: ref } = await octokit.rest.git.getRef({ owner, repo, ref: `heads/${defaultBranch}` });
   const baseSha = ref.object.sha;
   const { data: baseCommit } = await octokit.rest.git.getCommit({ owner, repo, commit_sha: baseSha });
@@ -77,19 +76,17 @@ export async function openTemplatePullRequest(
     base_tree: baseCommit.tree.sha,
     tree: files.map((f) => ({ path: f.path, mode: "100644" as const, type: "blob" as const, content: f.content })),
   });
-  const { data: commit } = await octokit.rest.git.createCommit({
-    owner,
-    repo,
-    message: "chore: Guildhall project setup (LFS, ignore rules, templates)",
-    tree: tree.sha,
-    parents: [baseSha],
-  });
+  const { data: commit } = await octokit.rest.git.createCommit({ owner, repo, message: spec.commitMessage, tree: tree.sha, parents: [baseSha] });
   await octokit.rest.git.createRef({ owner, repo, ref: `refs/heads/${branch}`, sha: commit.sha });
-  const { data: pr } = await octokit.rest.pulls.create({
-    owner,
-    repo,
-    head: branch,
-    base: defaultBranch,
+  const { data: pr } = await octokit.rest.pulls.create({ owner, repo, head: branch, base: defaultBranch, title: spec.title, body: spec.body });
+  return pr.html_url;
+}
+
+/** Engine setup PR (templates.ts), via openFilesPullRequest. */
+export async function openTemplatePullRequest(installationId: number, fullName: string, defaultBranch: string, files: TemplateFile[]): Promise<string> {
+  return openFilesPullRequest(installationId, fullName, defaultBranch, files, {
+    branchPrefix: "guildhall/setup",
+    commitMessage: "chore: Guildhall project setup (LFS, ignore rules, templates)",
     title: "Guildhall project setup",
     body: [
       "Adds engine-appropriate repository setup from Guildhall:",
@@ -100,7 +97,6 @@ export async function openTemplatePullRequest(
       "files already committed are not migrated automatically (`git lfs migrate import` does that).",
     ].join("\n"),
   });
-  return pr.html_url;
 }
 
 // --- OAuth (user-to-server) -------------------------------------------------------------

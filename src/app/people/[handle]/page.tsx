@@ -1,9 +1,12 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, count, desc, eq, sql } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { endorsements, githubActivity, memberships, portfolioItems, profileSkills, projects, users } from "@/db/schema";
+import { creditConfirmations, credits, endorsements, githubActivity, memberships, portfolioItems, profileSkills, projects, users } from "@/db/schema";
 import { toggleEndorsement } from "@/app/actions/rank";
+import { addCredit, confirmCredit, deleteCredit } from "@/app/actions/credits";
+import { BadgeCheck, Clapperboard, ExternalLink, Users as UsersIcon } from "lucide-react";
+import { creditSource, creditStatus } from "@/lib/credits";
 import { RankBadge } from "@/components/rank-badge";
 import { rankOf, sharesProject } from "@/lib/rank-db";
 import { GitMerge, Palette, Pencil } from "lucide-react";
@@ -46,6 +49,17 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
     viewer && viewer.id !== person.id ? sharesProject(db, viewer.id, person.id) : Promise.resolve(false),
   ]);
   const endorsedBy = (skillId: string) => endorsed.filter((e) => e.skillId === skillId);
+  const creditRows = await db
+    .select({ credit: credits, confirmations: sql<number>`(select count(*)::int from ${creditConfirmations} cc where cc.credit_id = ${credits.id})` })
+    .from(credits)
+    .where(eq(credits.userId, person.id))
+    .orderBy(desc(credits.year));
+  const viewerTitleKeys = viewer && viewer.id !== person.id
+    ? new Set((await db.select({ k: credits.titleKey }).from(credits).where(eq(credits.userId, viewer.id))).map((r) => r.k))
+    : new Set<string>();
+  const viewerConfirmed = viewer
+    ? new Set((await db.select({ id: creditConfirmations.creditId }).from(creditConfirmations).where(eq(creditConfirmations.confirmerId, viewer.id))).map((r) => r.id))
+    : new Set<string>();
   const avatar = resolveAvatar(person.avatar, person.handle);
   const mainDiscipline = DISCIPLINES.find((d) => d.specialisations.some((s) => skillIds.has(s.id)));
   const mainStyle = mainDiscipline ? DISCIPLINE_STYLE[mainDiscipline.id] : null;
@@ -119,6 +133,49 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
             <div className="mt-3 flex flex-wrap gap-1.5">
               {person.tools.map((t) => <span key={t} className="chip">{t}</span>)}
             </div>
+          )}
+        </section>
+
+        <section>
+          <h2 className="h2 mb-2 flex items-center gap-2"><Clapperboard size={18} className="text-accent" /> Shipped credits</h2>
+          {creditRows.length === 0 && <p className="text-sm text-fg-muted">No credits yet.</p>}
+          <ul className="space-y-2">
+            {creditRows.map(({ credit, confirmations }) => {
+              const status = creditStatus(credit.source, confirmations);
+              const src = credit.externalUrl ? creditSource(credit.externalUrl) : null;
+              return (
+                <li key={credit.id} className="card flex flex-wrap items-center gap-3 p-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold">{credit.title} <span className="font-normal text-fg-muted">· {credit.role}{credit.year ? ` · ${credit.year}` : ""}</span></div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                      {status === "verified" && <span className="chip-tint" style={{ "--c": "#34d399" } as React.CSSProperties}><BadgeCheck size={12} /> Verified on Guildhall</span>}
+                      {status === "confirmed" && <span className="chip-tint" style={{ "--c": "#22d3ee" } as React.CSSProperties}><UsersIcon size={12} /> Confirmed by {confirmations} teammate{confirmations === 1 ? "" : "s"}</span>}
+                      {status === "self_reported" && <span className="chip">Self-reported</span>}
+                      {src && credit.externalUrl && <a href={credit.externalUrl} target="_blank" rel="noreferrer nofollow" className="inline-flex items-center gap-1 text-fg-muted hover:text-accent"><ExternalLink size={12} /> {src}</a>}
+                    </div>
+                  </div>
+                  {credit.source === "self" && viewerTitleKeys.has(credit.titleKey) && !viewerConfirmed.has(credit.id) && (
+                    <form action={confirmCredit}>
+                      <input type="hidden" name="id" value={credit.id} />
+                      <input type="hidden" name="handle" value={person.handle} />
+                      <button className="btn-secondary py-1 text-xs"><BadgeCheck size={13} /> I worked on this too, confirm</button>
+                    </form>
+                  )}
+                  {viewer?.id === person.id && credit.source === "self" && (
+                    <form action={deleteCredit}><input type="hidden" name="id" value={credit.id} /><button className="text-xs text-fg-muted hover:text-bad">Remove</button></form>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {viewer?.id === person.id && (
+            <form action={addCredit} className="card mt-3 grid gap-2 p-3 sm:grid-cols-[1fr_1fr_90px]">
+              <input name="title" required placeholder="Game title" className="input" />
+              <input name="role" required placeholder="Your role, e.g. Environment Artist" className="input" />
+              <input name="year" type="number" min={1970} placeholder="Year" className="input" />
+              <input name="externalUrl" placeholder="Steam / IGDB / MobyGames / itch.io link (optional)" className="input sm:col-span-2" />
+              <button className="btn-secondary">Add credit</button>
+            </form>
           )}
         </section>
 

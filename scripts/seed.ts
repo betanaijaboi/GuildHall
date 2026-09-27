@@ -14,7 +14,7 @@ import { templateById } from "../src/lib/pipelines";
 const url = process.env.DATABASE_URL ?? "postgres://guildhall:guildhall@localhost:5432/guildhall";
 const client = postgres(url, { max: 1, onnotice: () => {} });
 const db = drizzle(client, { schema });
-const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons } = schema;
+const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits } = schema;
 
 await client`truncate users, projects, github_installations, github_deliveries restart identity cascade`;
 
@@ -170,6 +170,12 @@ await db.insert(milestones).values({ projectId: ash.id, ...milestoneFor("concept
 await db.insert(roleListings).values([
   { projectId: ash.id, skillId: "narrative.narrative_direction", title: "Narrative director", engagement: "revshare", hoursPerWeek: 8, compensation: "Rev-share" },
   { projectId: ash.id, skillId: "art.concept", title: "Concept artist — characters & castles", engagement: "paid", compensation: "Per piece" },
+]);
+
+// Shipped credits from before Guildhall (self-reported, confirmable by teammates on the same title).
+await db.insert(credits).values([
+  { userId: ids.jonas, title: "Ashfall Frontier", titleKey: "ashfall frontier", role: "Rendering Programmer", year: 2023, externalUrl: "https://www.mobygames.com/game/ashfall-frontier", source: "self" },
+  { userId: ids.priya, title: "Ashfall Frontier", titleKey: "ashfall frontier", role: "Level Designer", year: 2023, source: "self" },
 ]);
 
 // Service gigs.

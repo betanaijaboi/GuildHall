@@ -543,3 +543,36 @@ export const endorsements = pgTable(
   },
   (t) => [primaryKey({ columns: [t.fromId, t.toId, t.skillId] }), index("endorsements_to_idx").on(t.toId)],
 );
+
+// --- Shipped credits (C11) -----------------------------------------------------------------------
+
+export const creditSourceEnum = pgEnum("credit_source", ["self", "guildhall"]);
+
+export const credits = pgTable(
+  "credits",
+  {
+    id: id(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    /** Lower-cased, punctuation-free title used to match teammates on the same game. */
+    titleKey: text("title_key").notNull(),
+    role: text("role").notNull(),
+    year: integer("year"),
+    externalUrl: text("external_url"),
+    source: creditSourceEnum("source").notNull().default("self"),
+    projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("credits_user_idx").on(t.userId), index("credits_title_key_idx").on(t.titleKey), uniqueIndex("credits_project_user_idx").on(t.projectId, t.userId)],
+);
+
+/** A teammate who also worked on the title vouching for a self-reported credit. */
+export const creditConfirmations = pgTable(
+  "credit_confirmations",
+  {
+    creditId: uuid("credit_id").notNull().references(() => credits.id, { onDelete: "cascade" }),
+    confirmerId: uuid("confirmer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.creditId, t.confirmerId] })],
+);

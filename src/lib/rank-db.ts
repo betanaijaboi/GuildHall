@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import type { Db } from "@/db";
-import { assetReviews, assetVersions, endorsements, engagementMilestones, engagementReviews, engagements, githubActivity, memberships, tasks, users } from "@/db/schema";
+import { assetReviews, assetVersions, creditConfirmations, credits, endorsements, engagementMilestones, engagementReviews, engagements, githubActivity, memberships, tasks, users } from "@/db/schema";
 import { computeRank, EMPTY_INPUTS, type RankInputs } from "./rank";
 
 /** Rank inputs for many users at once (one query per signal, not per user). */
@@ -10,7 +10,7 @@ export async function loadRankInputs(db: Db, userIds: string[]): Promise<Map<str
   const people = await db.select({ id: users.id, login: users.githubLogin }).from(users).where(inArray(users.id, userIds));
   const byLogin = new Map(people.filter((p) => p.login).map((p) => [p.login!, p.id]));
 
-  const [prs, approved, paid, stages, endorse, reviews] = await Promise.all([
+  const [prs, approved, paid, stages, endorse, reviews, creds] = await Promise.all([
     byLogin.size
       ? db.select({ login: githubActivity.actorLogin, n: sql<number>`count(*)::int` }).from(githubActivity)
           .where(and(eq(githubActivity.kind, "pr_merged"), inArray(githubActivity.actorLogin, [...byLogin.keys()]))).groupBy(githubActivity.actorLogin)
@@ -26,6 +26,10 @@ export async function loadRankInputs(db: Db, userIds: string[]): Promise<Map<str
       .where(and(isNotNull(tasks.pipelineItemId), eq(tasks.status, "done"), inArray(tasks.assigneeId, userIds))).groupBy(tasks.assigneeId),
     db.select({ id: endorsements.toId, n: sql<number>`count(*)::int` }).from(endorsements).where(inArray(endorsements.toId, userIds)).groupBy(endorsements.toId),
     db.select({ id: engagementReviews.toId, rating: engagementReviews.rating }).from(engagementReviews).where(inArray(engagementReviews.toId, userIds)),
+    // Guildhall-verified credits, or self-reported ones a teammate confirmed.
+    db.select({ id: credits.userId, n: sql<number>`count(*)::int` }).from(credits)
+      .where(and(inArray(credits.userId, userIds), sql`(${credits.source} = 'guildhall' or exists (select 1 from ${creditConfirmations} cc where cc.credit_id = ${credits.id}))`))
+      .groupBy(credits.userId),
   ]);
   for (const r of prs) { const id = byLogin.get(r.login!); if (id) map.get(id)!.mergedPrs = r.n; }
   for (const r of approved) if (r.id) map.get(r.id)!.approvedAssets = r.n;
@@ -33,6 +37,7 @@ export async function loadRankInputs(db: Db, userIds: string[]): Promise<Map<str
   for (const r of stages) if (r.id) map.get(r.id)!.pipelineStages = r.n;
   for (const r of endorse) map.get(r.id)!.endorsements = r.n;
   for (const r of reviews) map.get(r.id)!.reviewRatings.push(r.rating);
+  for (const r of creds) map.get(r.id)!.credits = r.n;
   return map;
 }
 

@@ -10,11 +10,11 @@ describe("Guild Rank", () => {
   });
 
   it("adds capped evidence and shows every line", () => {
-    const r = computeRank({ mergedPrs: 50, approvedAssets: 4, paidMilestones: 3, pipelineStages: 10, endorsements: 2, reviewRatings: [5, 4] });
+    const r = computeRank({ mergedPrs: 50, approvedAssets: 4, paidMilestones: 3, pipelineStages: 10, endorsements: 2, credits: 0, reviewRatings: [5, 4] });
     // PRs capped at 300; 60 + 75 + 50 + 20 + (30+20)
     expect(r.points).toBe(300 + 60 + 75 + 50 + 20 + 50);
     expect(r.rank.label).toBe("Artisan");
-    expect(r.lines).toHaveLength(6);
+    expect(r.lines).toHaveLength(7);
     expect(r.lines[0]).toMatchObject({ count: 50, points: 300 });
     expect(r.avgRating).toBe(4.5);
   });
@@ -27,6 +27,6 @@ describe("Guild Rank", () => {
   it("reports progress to the next rank", () => {
     const r = computeRank({ ...EMPTY_INPUTS, mergedPrs: 5 });
     expect(r.progress).toBe(50);
-    expect(computeRank({ ...EMPTY_INPUTS, mergedPrs: 30, approvedAssets: 20, paidMilestones: 20, pipelineStages: 40, endorsements: 20, reviewRatings: Array(10).fill(5) }).rank.label).toBe("Grandmaster");
+    expect(computeRank({ ...EMPTY_INPUTS, mergedPrs: 30, approvedAssets: 20, paidMilestones: 20, pipelineStages: 40, endorsements: 20, credits: 0, reviewRatings: Array(10).fill(5) }).rank.label).toBe("Grandmaster");
   });
 });
