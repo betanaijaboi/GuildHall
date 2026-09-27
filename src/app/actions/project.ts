@@ -12,6 +12,7 @@ import { githubConfigured } from "@/lib/env";
 import { removeCollaborator } from "@/lib/github/client";
 import { GITHUB_PERMISSION, grantRepoAccess } from "@/lib/repo-access";
 import { fireEvent } from "@/lib/automations-db";
+import { alertForListing } from "@/lib/alerts-db";
 import { revokeGuestGrants } from "@/lib/guests";
 import { channelByName, createDefaultChannels, postMessage } from "@/lib/messages";
 import { uniqueProjectSlug } from "@/lib/project-slug";
@@ -121,7 +122,9 @@ export async function createListing(slug: string, form: FormData): Promise<void>
     hoursPerWeek: form.get("hoursPerWeek") || undefined,
     compensation: form.get("compensation") ?? "",
   });
-  await db.insert(roleListings).values({ projectId: project.id, ...data, title: data.title || skillLabel(data.skillId) });
+  const [listing] = await db.insert(roleListings).values({ projectId: project.id, ...data, title: data.title || skillLabel(data.skillId) }).returning({ id: roleListings.id });
+  // Saved-search alerts (C16) for people looking for exactly this kind of role.
+  await alertForListing(db, listing.id);
   revalidatePath(`/p/${slug}/roles`);
 }
 

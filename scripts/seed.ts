@@ -16,7 +16,7 @@ import { eq } from "drizzle-orm";
 const url = process.env.DATABASE_URL ?? "postgres://guildhall:guildhall@localhost:5432/guildhall";
 const client = postgres(url, { max: 1, onnotice: () => {} });
 const db = drizzle(client, { schema });
-const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes, gddPages, gddLinks, channels, channelAccess, channelLinks, jams, jamSeekers, playtests, playtestTesters, feedbackReports, roadmapItems, roadmapVotes } = schema;
+const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes, gddPages, gddLinks, channels, channelAccess, channelLinks, jams, jamSeekers, playtests, playtestTesters, feedbackReports, roadmapItems, roadmapVotes, savedSearches } = schema;
 
 await client`truncate users, projects, github_installations, github_deliveries restart identity cascade`;
 
@@ -292,6 +292,16 @@ const roadmap = await db.insert(roadmapItems).values([
 ]).returning();
 const voteFor = (title: string, handles: string[]) => handles.map((h) => ({ itemId: roadmap.find((r) => r.title === title)!.id, userId: ids[h] }));
 await db.insert(roadmapVotes).values([...voteFor("Co-op sailing", ["priya", "jonas", "elena", "tomas"]), ...voteFor("Steam Deck controls", ["tomas", "elena"]), ...voteFor("Name your boat", ["jonas"])]);
+
+// C16: saved role searches, alerts for open roles, and a first weekly digest for everyone.
+await db.insert(savedSearches).values([
+  { userId: ids.rafael, name: "Composition roles", skill: "audio.composition" },
+  { userId: ids.lukas, name: "Concept art roles on Unreal", skill: "art.concept", engine: "unreal" },
+  { userId: ids.amara, name: "Narrative direction roles", skill: "narrative.narrative_direction" },
+]);
+const { alertForListing, runWeeklyDigests } = await import("../src/lib/alerts-db");
+for (const l of await db.select({ id: roleListings.id }).from(roleListings)) await alertForListing(db as never, l.id);
+await runWeeklyDigests(db as never, new Date(), async () => false, "http://localhost:3000");
 
 await client.end();
 console.log(`seeded ${people.length} people, 2 projects, ${hooks.length} webhook deliveries`);

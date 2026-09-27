@@ -50,6 +50,10 @@ export const users = pgTable("users", {
   bio: text("bio").notNull().default(""),
   headline: text("headline").notNull().default(""),
   timezone: text("timezone"),
+  /** Optional, only for digests the user opted into (C16). Never shown publicly. */
+  email: text("email"),
+  emailDigest: boolean("email_digest").notNull().default(false),
+  lastDigestAt: timestamp("last_digest_at", { withTimezone: true }),
   availability: availabilityEnum("availability").notNull().default("open"),
   seniority: seniorityEnum("seniority"),
   engines: text("engines").array().notNull().default(sql`'{}'::text[]`),
@@ -948,4 +952,42 @@ export const roadmapVotes = pgTable(
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.itemId, t.userId] })],
+);
+
+// --- Alerts + weekly digest (C16) --------------------------------------------------------------------
+
+/** A saved role search ("narrative roles on Godot projects"); alerts when a matching role opens. */
+export const savedSearches = pgTable(
+  "saved_searches",
+  {
+    id: id(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    skill: text("skill"),
+    engine: text("engine"),
+    stage: text("stage"),
+    alerts: boolean("alerts").notNull().default(true),
+    createdAt: createdAt(),
+  },
+  (t) => [index("saved_searches_user_idx").on(t.userId)],
+);
+
+export type NotificationData = { lines?: string[] };
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: id(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").$type<"role_match" | "digest">().notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull().default(""),
+    url: text("url"),
+    data: jsonb("data").$type<NotificationData>().notNull().default(sql`'{}'::jsonb`),
+    /** Makes delivery idempotent, e.g. "role:<listingId>" or "digest:2026-W40". */
+    dedupeKey: text("dedupe_key").notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("notifications_dedupe_idx").on(t.userId, t.dedupeKey), index("notifications_user_idx").on(t.userId, t.createdAt)],
 );

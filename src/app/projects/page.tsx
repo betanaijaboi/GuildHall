@@ -1,5 +1,7 @@
 import { and, desc, eq, exists, sql, type SQL } from "drizzle-orm";
+import { BellRing } from "lucide-react";
 import Link from "next/link";
+import { saveRoleSearch } from "@/app/actions/alerts";
 import { db } from "@/db";
 import { memberships, projects, roleListings } from "@/db/schema";
 import { ProjectCover, ProjectCrest } from "@/components/project-cover";
@@ -83,6 +85,14 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
             <div className="w-56"><SkillSelect name="skill" defaultValue={f.skill} /></div>
             <button className="btn-secondary">Filter</button>
           </form>
+          {user && (f.skill || f.engine || f.stage) && (
+            <form action={saveRoleSearch}>
+              <input type="hidden" name="skill" value={f.skill ?? ""} />
+              <input type="hidden" name="engine" value={f.engine ?? ""} />
+              <input type="hidden" name="stage" value={f.stage ?? ""} />
+              <button className="btn-secondary" title="Get notified when a matching role opens"><BellRing size={15} /> Alert me</button>
+            </form>
+          )}
         </div>
         <ul className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {browse.map(({ project, openRoles }) => (
