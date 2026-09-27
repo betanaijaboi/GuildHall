@@ -14,7 +14,7 @@ import { GITHUB_PERMISSION, grantRepoAccess } from "@/lib/repo-access";
 import { fireEvent } from "@/lib/automations-db";
 import { revokeGuestGrants } from "@/lib/guests";
 import { channelByName, createDefaultChannels, postMessage } from "@/lib/messages";
-import { slugify } from "@/lib/slug";
+import { uniqueProjectSlug } from "@/lib/project-slug";
 import { milestoneFor } from "@/lib/milestones";
 import { ENGAGEMENTS, ENGINES, isSkillId, PLATFORMS, skillLabel, STAGES, type StageId } from "@/lib/taxonomy";
 
@@ -31,15 +31,7 @@ const projectSchema = z.object({
   genres: z.string().max(200),
 });
 
-async function uniqueSlug(name: string): Promise<string> {
-  const base = slugify(name);
-  for (let i = 0; i < 50; i++) {
-    const slug = i === 0 ? base : `${base}-${i + 1}`;
-    const [taken] = await db.select({ id: projects.id }).from(projects).where(eq(projects.slug, slug)).limit(1);
-    if (!taken) return slug;
-  }
-  return `${base}-${Date.now().toString(36)}`;
-}
+const uniqueSlug = (name: string) => uniqueProjectSlug(db, name);
 
 export async function createProject(form: FormData): Promise<void> {
   const user = await requireUser();

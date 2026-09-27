@@ -16,7 +16,7 @@ import { eq } from "drizzle-orm";
 const url = process.env.DATABASE_URL ?? "postgres://guildhall:guildhall@localhost:5432/guildhall";
 const client = postgres(url, { max: 1, onnotice: () => {} });
 const db = drizzle(client, { schema });
-const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes, gddPages, gddLinks, channels, channelAccess, channelLinks } = schema;
+const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes, gddPages, gddLinks, channels, channelAccess, channelLinks, jams, jamSeekers } = schema;
 
 await client`truncate users, projects, github_installations, github_deliveries restart identity cascade`;
 
@@ -247,6 +247,25 @@ await postMessage(db, { channelId: tideArt.id, authorId: hana.id, body: "Loving 
 const tideBuilds = (await channelByName(db, tide.id, "builds"))!;
 await db.insert(channelLinks).values({ channelId: tideBuilds.id, projectId: ash.id });
 await postMessage(db, { channelId: tideBuilds.id, authorId: null, body: "🔗 #builds is now shared with Ashen Crown (linked by Priya Nair). Both teams can read and post here." });
+
+// C4: a live jam with one team and two solo jammers, plus an upcoming jam with a secret theme.
+const [tinyJam] = await db.insert(jams).values({
+  slug: "tiny-tides-jam", name: "Tiny Tides Jam", hostId: ids.kwame, theme: "Everything is borrowed",
+  description: "48 hours, any engine, teams of up to 4. Make something small and finished.",
+  startsAt: new Date(Date.now() - 20 * 3_600_000), endsAt: new Date(Date.now() + 28 * 3_600_000), maxTeamSize: 4,
+}).returning();
+await db.insert(jams).values({
+  slug: "pixel-harvest-jam", name: "Pixel Harvest Jam", hostId: ids.elena, theme: "Roots", itchUrl: "https://itch.io/jam/pixel-harvest",
+  description: "A cozy pixel-art jam. Entries go on itch.io; form your team here.",
+  startsAt: new Date(Date.now() + 3 * 86_400_000), endsAt: new Date(Date.now() + 5 * 86_400_000), maxTeamSize: 3,
+});
+const { formTeam } = await import("../src/lib/jams-db");
+const { team: jamTeam } = await formTeam(db as never, tinyJam, ids.sofia, { name: "Borrowed Light", engine: "godot", lookingFor: ["engineering.gameplay", "audio.composition"] });
+await db.insert(jamSeekers).values([
+  { jamId: tinyJam.id, userId: ids.tomas, note: "QA + level scripting, 5h/day, happy to playtest everyone's builds.", skills: ["production.qa", "design.level"] },
+  { jamId: tinyJam.id, userId: ids.rafael, note: "Composer looking for a moody little game to score.", skills: ["audio.composition", "audio.sound_design"] },
+]);
+void jamTeam;
 
 await client.end();
 console.log(`seeded ${people.length} people, 2 projects, ${hooks.length} webhook deliveries`);

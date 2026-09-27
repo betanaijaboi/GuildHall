@@ -21,8 +21,7 @@ export function SkillChip({ skillId, prefix }: { skillId: string; prefix?: strin
   return (
     <span className="chip-tint" style={{ "--c": color } as React.CSSProperties}>
       <Icon size={12} strokeWidth={2.4} />
-      {prefix}
-      {skillLabel(skillId)}
+      {prefix ? `${prefix} ${skillLabel(skillId)}` : skillLabel(skillId)}
     </span>
   );
 }

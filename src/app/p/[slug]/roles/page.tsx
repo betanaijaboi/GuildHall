@@ -76,7 +76,7 @@ export default async function RolesPage({ params }: { params: Promise<{ slug: st
           <h2 className="h2">Party composition for {labelFor(STAGES, project.stage)}</h2>
           <p className="text-sm text-fg-muted">Specialisations a team usually needs at this stage, compared with your members&apos; roles and profile skills.</p>
           <div className="flex flex-wrap gap-1.5">
-            {gaps.covered.map((s) => <SkillChip key={s} skillId={s} prefix="✓ " />)}
+            {gaps.covered.map((s) => <SkillChip key={s} skillId={s} prefix="✓" />)}
             {gaps.recruiting.map((s) => <span key={s} className="chip border-dashed text-warn">recruiting · {skillLabel(s)}</span>)}
             {gaps.missing.map((s) => <span key={s} className="chip border-dashed border-bad/50 text-bad">missing · {skillLabel(s)}</span>)}
           </div>

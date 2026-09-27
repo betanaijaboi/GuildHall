@@ -787,3 +787,65 @@ export const huddleCaptions = pgTable(
   },
   (t) => [index("huddle_captions_idx").on(t.huddleId, t.at)],
 );
+
+// --- Jam mode (C4) -------------------------------------------------------------------------------
+
+/** A game jam hosted on Guildhall, or mirrored from itch.io (`itchUrl`) for team formation. */
+export const jams = pgTable("jams", {
+  id: id(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  /** Revealed to everyone when the jam starts; the host always sees it. */
+  theme: text("theme").notNull().default(""),
+  hostId: uuid("host_id").references(() => users.id, { onDelete: "set null" }),
+  itchUrl: text("itch_url"),
+  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+  endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+  maxTeamSize: integer("max_team_size").notNull().default(4),
+  createdAt: createdAt(),
+});
+
+/** "Looking for a team" posts on a jam's board. */
+export const jamSeekers = pgTable(
+  "jam_seekers",
+  {
+    jamId: uuid("jam_id").notNull().references(() => jams.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    note: text("note").notNull().default(""),
+    skills: text("skills").array().notNull().default(sql`'{}'::text[]`),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.jamId, t.userId] })],
+);
+
+/** A jam team; its workspace is an ordinary Guildhall project, time-boxed by the jam. */
+export const jamTeams = pgTable(
+  "jam_teams",
+  {
+    id: id(),
+    jamId: uuid("jam_id").notNull().references(() => jams.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id").notNull().unique().references(() => projects.id, { onDelete: "cascade" }),
+    lookingFor: text("looking_for").array().notNull().default(sql`'{}'::text[]`),
+    submissionUrl: text("submission_url"),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    /** Deadline reminders already posted (index into REMINDERS). */
+    remindersSent: integer("reminders_sent").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [index("jam_teams_jam_idx").on(t.jamId)],
+);
+
+export const jamRequestStatusEnum = pgEnum("jam_request_status", ["pending", "accepted", "declined"]);
+
+export const jamRequests = pgTable(
+  "jam_requests",
+  {
+    teamId: uuid("team_id").notNull().references(() => jamTeams.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    message: text("message").notNull().default(""),
+    status: jamRequestStatusEnum("status").notNull().default("pending"),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.teamId, t.userId] })],
+);

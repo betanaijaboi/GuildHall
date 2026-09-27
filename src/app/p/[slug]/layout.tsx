@@ -1,4 +1,9 @@
-import { Globe, Lock } from "lucide-react";
+import { eq } from "drizzle-orm";
+import { Gamepad2, Globe, Lock } from "lucide-react";
+import { db } from "@/db";
+import { jams, jamTeams } from "@/db/schema";
+import { JamCountdown } from "@/components/jam-countdown";
+import { jamPhase } from "@/lib/jams";
 import Link from "next/link";
 import { ProjectCover, ProjectCrest } from "@/components/project-cover";
 import { ProjectTabs } from "@/components/project-tabs";
@@ -10,6 +15,9 @@ export default async function ProjectLayout({ children, params }: { children: Re
   const { slug } = await params;
   const user = await getCurrentUser();
   const { project, role } = await loadProject(slug, user);
+  // Jam team workspaces (C4) carry the jam's deadline in the header.
+  const [jamRow] = await db.select({ jam: jams }).from(jamTeams).innerJoin(jams, eq(jams.id, jamTeams.jamId)).where(eq(jamTeams.projectId, project.id)).limit(1);
+  const jamState = jamRow ? jamPhase(jamRow.jam, new Date()) : null;
   return (
     <div className="space-y-5">
       <header className="card overflow-hidden p-0">
@@ -30,6 +38,15 @@ export default async function ProjectLayout({ children, params }: { children: Re
             </div>
           </div>
         </div>
+        {jamRow && (
+          <Link href={`/jams/${jamRow.jam.slug}`} className="flex flex-wrap items-center gap-2 border-t border-border bg-gradient-to-r from-violet-500/10 to-cyan-500/5 px-5 py-2 text-sm hover:from-violet-500/20">
+            <Gamepad2 size={15} className="text-accent" />
+            <span className="font-medium">{jamRow.jam.name}</span>
+            <span className="ml-auto text-fg-muted">
+              {jamState === "running" ? <JamCountdown compact target={jamRow.jam.endsAt.toISOString()} label="⏳ ends in" /> : jamState === "upcoming" ? <JamCountdown compact target={jamRow.jam.startsAt.toISOString()} label="starts in" /> : "🏁 jam over"}
+            </span>
+          </Link>
+        )}
         {role && (
           <div className="border-t border-border px-5 py-2.5">
             <ProjectTabs slug={slug} isLead={roleAtLeast(role, "lead")} isGuest={role === "guest"} />
