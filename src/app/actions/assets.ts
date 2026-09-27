@@ -4,7 +4,8 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
-import { assetComments, assetReviews, assets, assetVersions } from "@/db/schema";
+import { assetComments, assetReviews, assets, assetVersions, pipelineItems } from "@/db/schema";
+import { completeCurrentStage } from "@/lib/pipeline-db";
 import { loadProject, roleAtLeast } from "@/lib/access";
 import { postAssetActivity } from "@/lib/asset-feed";
 import { assetStatus, formatTimecode, normalisePin } from "@/lib/assets";
@@ -86,5 +87,12 @@ export async function reviewAsset(slug: string, input: { assetId: string; versio
       ],
     },
   );
+  // Approval moves any linked asset pipeline forward one stage.
+  if (decision === "approved") {
+    for (const item of await db.select().from(pipelineItems).where(eq(pipelineItems.assetId, asset.id))) {
+      await completeCurrentStage(db, project.id, item.id);
+    }
+  }
   revalidatePath(`/p/${slug}/assets`, "layout");
+  revalidatePath(`/p/${slug}/pipelines`);
 }

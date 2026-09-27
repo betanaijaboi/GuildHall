@@ -9,11 +9,12 @@ import * as schema from "../src/db/schema";
 import { applyWebhook } from "../src/lib/github/apply";
 import { createDefaultChannels, channelByName, postMessage } from "../src/lib/messages";
 import { milestoneFor } from "../src/lib/milestones";
+import { templateById } from "../src/lib/pipelines";
 
 const url = process.env.DATABASE_URL ?? "postgres://guildhall:guildhall@localhost:5432/guildhall";
 const client = postgres(url, { max: 1, onnotice: () => {} });
 const db = drizzle(client, { schema });
-const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications } = schema;
+const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks } = schema;
 
 await client`truncate users, projects, github_installations, github_deliveries restart identity cascade`;
 
@@ -130,6 +131,23 @@ const hooks: [string, Record<string, unknown>][] = [
 ];
 let n = 0;
 for (const [event, payload] of hooks) await applyWebhook(db, `seed-${++n}`, event, payload);
+
+// Asset pipelines on Tidebound.
+for (const [name, templateId, done, owners] of [
+  ["Captain Mara", "character", 2, [ids.amara, ids.mei]],
+  ["Harbour district", "environment", 1, [ids.amara]],
+  ["Storm theme", "music", 0, []],
+] as const) {
+  const template = templateById(templateId)!;
+  const [item] = await db.insert(pipelineItems).values({ projectId: tide.id, name, template: template.id, stages: template.stages, createdBy: ids.amara }).returning();
+  await db.insert(tasks).values(
+    template.stages.map((stage, i) => ({
+      projectId: tide.id, title: `${name}: ${stage}`, pipelineItemId: item.id, stageIndex: i,
+      status: i < done ? ("done" as const) : i === done ? ("doing" as const) : ("todo" as const),
+      completedAt: i < done ? new Date() : null, assigneeId: owners[i] ?? null,
+    })),
+  );
+}
 
 // Project 2: Unreal, concept stage, recruiting.
 const [ash] = await db

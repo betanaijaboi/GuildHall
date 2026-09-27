@@ -194,10 +194,13 @@ export const tasks = pgTable(
     ghRepoId: bigint("gh_repo_id", { mode: "number" }),
     ghIssueNumber: integer("gh_issue_number"),
     ghUrl: text("gh_url"),
+    /** Set when the task is a stage of an asset pipeline (C6). */
+    pipelineItemId: uuid("pipeline_item_id").references(() => pipelineItems.id, { onDelete: "cascade" }),
+    stageIndex: integer("stage_index"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
-  (t) => [uniqueIndex("tasks_gh_issue_idx").on(t.projectId, t.ghRepoId, t.ghIssueNumber)],
+  (t) => [uniqueIndex("tasks_gh_issue_idx").on(t.projectId, t.ghRepoId, t.ghIssueNumber), index("tasks_pipeline_idx").on(t.pipelineItemId, t.stageIndex)],
 );
 
 export type ChecklistItem = { text: string; done: boolean };
@@ -365,4 +368,24 @@ export const conflictAlerts = pgTable(
     lastWarnedAt: timestamp("last_warned_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.projectId, t.path] })],
+);
+
+// --- Asset pipelines (C6) --------------------------------------------------------------------
+
+/** One asset moving through a pipeline, e.g. "Captain Mara" through the character pipeline. */
+export const pipelineItems = pgTable(
+  "pipeline_items",
+  {
+    id: id(),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    template: text("template").notNull(),
+    stages: jsonb("stages").$type<string[]>().notNull(),
+    /** Optional link to an asset under review; approving it completes the current stage. */
+    assetId: uuid("asset_id").references(() => assets.id, { onDelete: "set null" }),
+    ghParentIssueNumber: integer("gh_parent_issue_number"),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("pipeline_items_project_idx").on(t.projectId)],
 );

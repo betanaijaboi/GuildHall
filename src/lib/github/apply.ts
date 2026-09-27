@@ -2,6 +2,7 @@ import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import { conflictAlerts, fileTouches, githubActivity, githubDeliveries, githubInstallations, projectRepos, tasks, users } from "@/db/schema";
 import { fileName, findHotspots } from "@/lib/conflicts";
+import { announceStageDone } from "@/lib/pipeline-db";
 import { channelByName, postMessage, type Notify } from "@/lib/messages";
 import { publish, type ChannelEvent } from "@/lib/pubsub";
 import { mapEvent, repoIdOf, type Effect } from "./events";
@@ -128,6 +129,11 @@ async function applyEffect(db: Db, projectId: string, repoId: number, effect: Ef
         ? (await db.select({ id: users.id }).from(users).where(eq(users.githubLogin, effect.assigneeLogin)).limit(1))[0]
         : undefined;
       const status = effect.state === "closed" ? "done" : undefined;
+      const [before] = await db
+        .select({ status: tasks.status, pipelineItemId: tasks.pipelineItemId, stageIndex: tasks.stageIndex })
+        .from(tasks)
+        .where(and(eq(tasks.projectId, projectId), eq(tasks.ghRepoId, repoId), eq(tasks.ghIssueNumber, effect.issueNumber)))
+        .limit(1);
       await db
         .insert(tasks)
         .values({
@@ -153,6 +159,10 @@ async function applyEffect(db: Db, projectId: string, repoId: number, effect: Ef
             completedAt: effect.state === "closed" ? sql`coalesce(${tasks.completedAt}, now())` : sql`null`,
           },
         });
+      // Closing a pipeline stage's issue on GitHub unlocks the next stage here too.
+      if (effect.state === "closed" && before?.pipelineItemId && before.stageIndex != null && before.status !== "done") {
+        await announceStageDone(db, projectId, before.pipelineItemId, before.stageIndex, notify);
+      }
       return;
     }
   }

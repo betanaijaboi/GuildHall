@@ -11,6 +11,8 @@ import { requireUser } from "@/lib/auth";
 import { loadDigest } from "@/lib/digest";
 import { channelByName, postMessage } from "@/lib/messages";
 import { milestoneFor, nextStage } from "@/lib/milestones";
+import { announceStageDone, stageTasks } from "@/lib/pipeline-db";
+import { isStageLocked } from "@/lib/pipelines";
 
 // --- Chat -----------------------------------------------------------------------------------
 
@@ -62,11 +64,18 @@ export async function setTaskStatus(slug: string, form: FormData): Promise<void>
   const { project } = await loadProject(slug, user, "contractor");
   const id = z.string().uuid().parse(form.get("id"));
   const status = z.enum(["todo", "doing", "done"]).parse(form.get("status"));
-  await db
-    .update(tasks)
-    .set({ status, completedAt: status === "done" ? new Date() : null })
-    .where(and(eq(tasks.id, id), eq(tasks.projectId, project.id)));
+  const [task] = await db.select().from(tasks).where(and(eq(tasks.id, id), eq(tasks.projectId, project.id))).limit(1);
+  if (!task) return;
+  if (task.pipelineItemId && task.stageIndex != null && status !== "todo") {
+    const stages = await stageTasks(db, task.pipelineItemId);
+    if (isStageLocked(stages.map((t) => t.status), task.stageIndex)) throw new Error("This stage is locked until the previous stage is done");
+  }
+  await db.update(tasks).set({ status, completedAt: status === "done" ? new Date() : null }).where(eq(tasks.id, task.id));
+  if (task.pipelineItemId && task.stageIndex != null && status === "done" && task.status !== "done") {
+    await announceStageDone(db, project.id, task.pipelineItemId, task.stageIndex);
+  }
   revalidatePath(`/p/${slug}/tasks`);
+  revalidatePath(`/p/${slug}/pipelines`);
 }
 
 // --- Milestones -----------------------------------------------------------------------------

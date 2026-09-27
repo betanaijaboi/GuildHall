@@ -1,6 +1,8 @@
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { memberships, tasks, users } from "@/db/schema";
+import { Lock, Workflow } from "lucide-react";
+import { isStageLocked } from "@/lib/pipelines";
 import { createTask, setTaskStatus } from "@/app/actions/workspace";
 import { loadProject } from "@/lib/access";
 import { requireUser } from "@/lib/auth";
@@ -22,6 +24,12 @@ export default async function TasksPage({ params }: { params: Promise<{ slug: st
     db.select({ id: users.id, name: users.name }).from(memberships).innerJoin(users, eq(users.id, memberships.userId)).where(eq(memberships.projectId, project.id)),
   ]);
   const setStatus = setTaskStatus.bind(null, slug);
+  const locked = new Set(
+    rows
+      .filter((r) => r.task.pipelineItemId && r.task.stageIndex != null)
+      .filter((r) => isStageLocked(rows.filter((x) => x.task.pipelineItemId === r.task.pipelineItemId).sort((a, b) => a.task.stageIndex! - b.task.stageIndex!).map((x) => x.task.status), r.task.stageIndex!))
+      .map((r) => r.task.id),
+  );
 
   return (
     <div className="space-y-4">
@@ -47,17 +55,20 @@ export default async function TasksPage({ params }: { params: Promise<{ slug: st
               <ul className="stagger space-y-2">
                 {items.map(({ task, assignee }) => (
                   <li key={task.id} className="card card-hover p-3">
-                    <div className="text-sm font-medium">{task.title}</div>
+                    <div className="flex items-start gap-1.5 text-sm font-medium">
+                      {task.pipelineItemId && (locked.has(task.id) ? <Lock size={14} className="mt-0.5 shrink-0 text-fg-muted" /> : <Workflow size={14} className="mt-0.5 shrink-0 text-accent" />)}
+                      {task.title}
+                    </div>
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-fg-muted">
                       {assignee && <span>{assignee.name}</span>}
                       {task.ghUrl && <a href={task.ghUrl} target="_blank" rel="noreferrer" className="link">GitHub #{task.ghIssueNumber}</a>}
                     </div>
-                    <form action={setStatus} className="mt-2 flex gap-1">
+                    {locked.has(task.id) ? <p className="mt-2 text-xs text-fg-muted">Locked until the previous stage is done</p> : <form action={setStatus} className="mt-2 flex gap-1">
                       <input type="hidden" name="id" value={task.id} />
                       {COLUMNS.filter((c) => c.id !== col.id).map((c) => (
                         <button key={c.id} name="status" value={c.id} className="btn-secondary px-2 py-0.5 text-xs">→ {c.label}</button>
                       ))}
-                    </form>
+                    </form>}
                   </li>
                 ))}
               </ul>

@@ -170,3 +170,33 @@ export async function listLfsLocks(installationId: number, fullName: string): Pr
 export async function forceUnlock(installationId: number, fullName: string, lockId: string): Promise<void> {
   await lfsRequest(installationId, fullName, `/${encodeURIComponent(lockId)}/unlock`, { method: "POST", body: JSON.stringify({ force: true }) });
 }
+
+// --- Issues with sub-issues and dependencies (asset pipelines) ------------------------------
+
+export type CreatedIssue = { id: number; number: number; url: string };
+
+export async function createIssue(installationId: number, fullName: string, title: string, body: string, labels: string[] = []): Promise<CreatedIssue> {
+  const octokit = await installationClient(installationId);
+  const { data } = await octokit.rest.issues.create({ ...splitName(fullName), title, body, labels });
+  return { id: data.id, number: data.number, url: data.html_url };
+}
+
+/** Attach `child` (by issue id) as a sub-issue of `parentNumber`. */
+export async function addSubIssue(installationId: number, fullName: string, parentNumber: number, childId: number): Promise<void> {
+  const octokit = await installationClient(installationId);
+  await octokit.request("POST /repos/{owner}/{repo}/issues/{issue_number}/sub_issues", {
+    ...splitName(fullName),
+    issue_number: parentNumber,
+    sub_issue_id: childId,
+  });
+}
+
+/** Mark issue `number` as blocked by the issue with id `blockerId`. */
+export async function addBlockedBy(installationId: number, fullName: string, number: number, blockerId: number): Promise<void> {
+  const octokit = await installationClient(installationId);
+  await octokit.request("POST /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by", {
+    ...splitName(fullName),
+    issue_number: number,
+    issue_id: blockerId,
+  });
+}
