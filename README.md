@@ -20,10 +20,10 @@ The product spec, research and roadmap live in the private design vault
 | **Asset review** | Upload PNG, JPEG, WebP, GIF, MP4, WebM or GLB (checked by content sniffing; SVG and HTML are rejected). Pin comments on images, frame-accurate pins on video with a timeline, and surface hotspots on 3D models via `<model-viewer>`. Versions, approve or request changes (you can't approve your own upload), threaded activity in `#art`. Files are served only to members, with Range support |
 | **Conflict radar** | Push webhooks record who touched unmergeable files (.umap, .uasset, .unity, .psd, .blend, …). A file edited by 2+ people in a week triggers one `#art` warning per file per week, cross-branch aware. The radar page shows hotspots, recent touches and live Git LFS locks, with ask-to-release and lead-only force unlock |
 | **Asset pipelines** | Ten templates (character, environment, prop, animation, VFX, music, SFX, level, dialogue, UI). Every stage is a task that unlocks in order (enforced on the board). Approving a linked asset review, or closing the stage's GitHub issue, completes the stage and pings whoever is next. Mirrored to GitHub as a parent issue plus sub-issues with blocked-by links. Producer grid per asset type |
+| **Contracts & payments** | Contract templates (work-for-hire or rev-share) with IP assignment, credits, portfolio and confidentiality terms. Text is frozen and SHA-256 hashed on send; typed-name e-signatures by both parties; paid contractors get repo access only once signed. Milestones are funded via Stripe Checkout (Connect, separate charges and transfers) and released on approval or automatically when a linked asset is approved. Fees: 6%, or a client-paid $29 flat fee so the maker keeps 100%. Disputes, reviews, payout onboarding. See [docs/payments.md](docs/payments.md); simulated locally |
 | **Team gaps** | Compares the roster with the roles the current stage needs, and suggests people ranked by skill, engine and availability |
 
-**Not in the MVP yet** (see the build order in the vault's competitor-components.md): payments and escrow, contracts,
-voice/video, two-way issue sync, Discord bridge, desktop and
+**Not in the MVP yet** (see the build order in the vault's competitor-components.md): voice/video, two-way issue sync, Discord bridge, desktop and
 mobile apps, verified skill badges beyond the merged-PR count, and direct
 invites.
 

@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { portfolioItems, profileSkills } from "@/db/schema";
 import { addPortfolioItem, deletePortfolioItem, updateProfile } from "@/app/actions/profile";
 import Link from "next/link";
-import { Palette } from "lucide-react";
+import { Palette, Wallet } from "lucide-react";
 import { Avatar } from "@/components/avatar";
 import { CheckboxRow, SkillPicker } from "@/components/skill-picker";
 import { requireUser } from "@/lib/auth";
@@ -32,6 +32,10 @@ export default async function EditProfilePage({ searchParams }: { searchParams: 
           <div className="text-sm text-fg-muted">Pick a face, hair, gear and backdrop: it follows you across chat, teams and your profile.</div>
         </div>
         <span className="btn-secondary"><Palette size={16} /> Customize</span>
+      </Link>
+      <Link href="/settings/payouts" className="card card-hover flex items-center gap-3 text-sm">
+        <Wallet size={20} className="text-accent" />
+        <span className="flex-1">Payouts: connect an account to get paid for contract milestones</span>
       </Link>
       <form action={updateProfile} className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-2">

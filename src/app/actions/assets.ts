@@ -6,6 +6,8 @@ import { z } from "zod";
 import { db } from "@/db";
 import { assetComments, assetReviews, assets, assetVersions, pipelineItems } from "@/db/schema";
 import { completeCurrentStage } from "@/lib/pipeline-db";
+import { releaseForAsset } from "@/lib/engagements";
+import { paymentProvider, paymentsConfigured } from "@/lib/payments";
 import { loadProject, roleAtLeast } from "@/lib/access";
 import { postAssetActivity } from "@/lib/asset-feed";
 import { assetStatus, formatTimecode, normalisePin } from "@/lib/assets";
@@ -92,6 +94,8 @@ export async function reviewAsset(slug: string, input: { assetId: string; versio
     for (const item of await db.select().from(pipelineItems).where(eq(pipelineItems.assetId, asset.id))) {
       await completeCurrentStage(db, project.id, item.id);
     }
+    // ...and releases any funded payment milestone tied to this asset.
+    if (paymentsConfigured()) await releaseForAsset(db, paymentProvider(), asset.id);
   }
   revalidatePath(`/p/${slug}/assets`, "layout");
   revalidatePath(`/p/${slug}/pipelines`);

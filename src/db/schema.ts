@@ -389,3 +389,85 @@ export const pipelineItems = pgTable(
   },
   (t) => [index("pipeline_items_project_idx").on(t.projectId)],
 );
+
+// --- Contracts & escrowed milestones (C3, C24) -------------------------------------------------
+
+export const engagementKindEnum = pgEnum("engagement_kind", ["work_for_hire", "revshare"]);
+export const engagementStatusEnum = pgEnum("engagement_status", ["draft", "sent", "active", "completed", "cancelled"]);
+export const pricingModelEnum = pgEnum("pricing_model", ["percent", "flat"]);
+export const milestonePayStatusEnum = pgEnum("milestone_pay_status", ["unfunded", "funding", "funded", "released", "disputed", "refunded"]);
+
+export const engagements = pgTable(
+  "engagements",
+  {
+    id: id(),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    clientId: uuid("client_id").notNull().references(() => users.id),
+    makerId: uuid("maker_id").notNull().references(() => users.id),
+    title: text("title").notNull(),
+    kind: engagementKindEnum("kind").notNull(),
+    status: engagementStatusEnum("status").notNull().default("draft"),
+    currency: text("currency").notNull().default("usd"),
+    pricingModel: pricingModelEnum("pricing_model").notNull().default("percent"),
+    /** Structured terms (see src/lib/contracts.ts) — editable while draft. */
+    terms: jsonb("terms").notNull(),
+    /** Frozen rendered text + hash once sent; signatures bind to the hash. */
+    contractText: text("contract_text"),
+    contractHash: text("contract_hash"),
+    makerSignedName: text("maker_signed_name"),
+    makerSignedAt: timestamp("maker_signed_at", { withTimezone: true }),
+    clientSignedName: text("client_signed_name"),
+    clientSignedAt: timestamp("client_signed_at", { withTimezone: true }),
+    flatFeePaid: boolean("flat_fee_paid").notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [index("engagements_project_idx").on(t.projectId)],
+);
+
+export const engagementMilestones = pgTable("engagement_milestones", {
+  id: id(),
+  engagementId: uuid("engagement_id").notNull().references(() => engagements.id, { onDelete: "cascade" }),
+  position: integer("position").notNull(),
+  title: text("title").notNull(),
+  amountCents: integer("amount_cents"),
+  /** Approving this asset review releases the milestone. */
+  assetId: uuid("asset_id").references(() => assets.id, { onDelete: "set null" }),
+  status: milestonePayStatusEnum("status").notNull().default("unfunded"),
+  platformFeeCents: integer("platform_fee_cents").notNull().default(0),
+  paymentRef: text("payment_ref"),
+  transferRef: text("transfer_ref"),
+  fundedAt: timestamp("funded_at", { withTimezone: true }),
+  releasedAt: timestamp("released_at", { withTimezone: true }),
+  disputeReason: text("dispute_reason"),
+});
+
+/** A maker's payout account with the payment provider (Stripe Connect Express, or the dev simulator). */
+export const payoutAccounts = pgTable("payout_accounts", {
+  userId: uuid("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(),
+  accountId: text("account_id").notNull(),
+  payoutsEnabled: boolean("payouts_enabled").notNull().default(false),
+  createdAt: createdAt(),
+});
+
+/** Reviews both parties leave after an engagement completes (input to Guild Rank). */
+export const engagementReviews = pgTable(
+  "engagement_reviews",
+  {
+    id: id(),
+    engagementId: uuid("engagement_id").notNull().references(() => engagements.id, { onDelete: "cascade" }),
+    fromId: uuid("from_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    toId: uuid("to_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    rating: integer("rating").notNull(),
+    body: text("body").notNull().default(""),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("engagement_reviews_once_idx").on(t.engagementId, t.fromId)],
+);
+
+/** Provider webhook events already processed (idempotency). */
+export const paymentEvents = pgTable("payment_events", {
+  eventId: text("event_id").primaryKey(),
+  type: text("type").notNull(),
+  receivedAt: createdAt(),
+});

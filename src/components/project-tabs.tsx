@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Flag, ImageIcon, ListTodo, MessagesSquare, Newspaper, Settings, Users, Workflow } from "lucide-react";
+import { BarChart3, FileSignature, Flag, ImageIcon, ListTodo, MessagesSquare, Newspaper, Settings, Users, Workflow } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -11,6 +11,7 @@ const TABS = [
   { href: "tasks", match: "tasks", label: "Tasks", icon: ListTodo },
   { href: "milestones", match: "milestones", label: "Quest log", icon: Flag },
   { href: "roles", match: "roles", label: "Party", icon: Users },
+  { href: "contracts", match: "contracts", label: "Contracts", icon: FileSignature },
   { href: "updates", match: "updates", label: "Devlog", icon: Newspaper },
   { href: "digest", match: "digest", label: "Digest", icon: BarChart3 },
   { href: "settings", match: "settings", label: "Settings", icon: Settings },

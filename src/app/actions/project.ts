@@ -9,7 +9,8 @@ import { applications, memberships, milestones, projectRepos, projects, roleList
 import { loadProject, roleAtLeast } from "@/lib/access";
 import { requireUser } from "@/lib/auth";
 import { githubConfigured } from "@/lib/env";
-import { inviteCollaborator, removeCollaborator, type GitHubPermission } from "@/lib/github/client";
+import { removeCollaborator } from "@/lib/github/client";
+import { GITHUB_PERMISSION, grantRepoAccess } from "@/lib/repo-access";
 import { channelByName, createDefaultChannels, postMessage } from "@/lib/messages";
 import { slugify } from "@/lib/slug";
 import { milestoneFor } from "@/lib/milestones";
@@ -159,13 +160,7 @@ export async function applyToListing(form: FormData): Promise<void> {
   redirect(`/p/${row.project.slug}?applied=1`);
 }
 
-const GITHUB_PERMISSION: Record<string, GitHubPermission | null> = {
-  owner: "admin",
-  lead: "maintain",
-  member: "push",
-  contractor: "push",
-  guest: null,
-};
+
 
 export async function decideApplication(slug: string, form: FormData): Promise<void> {
   const user = await requireUser();
@@ -200,28 +195,15 @@ export async function decideApplication(slug: string, form: FormData): Promise<v
 
   const general = await channelByName(db, project.id, "general");
   const notes = [`Welcome ${row.applicant.name} (@${row.applicant.handle}), joining as ${skillLabel(row.listing.skillId)}.`];
-  notes.push(...(await grantRepoAccess(project.id, row.applicant.githubLogin, GITHUB_PERMISSION[memberRole])));
+  if (memberRole === "contractor") {
+    notes.push("Repo access will be granted once their contract is signed (Contracts tab).");
+  } else {
+    notes.push(...(await grantRepoAccess(db, project.id, row.applicant.githubLogin, GITHUB_PERMISSION[memberRole])));
+  }
   if (general) await postMessage(db, { channelId: general.id, authorId: null, body: notes.join("\n") });
   revalidatePath(`/p/${slug}/roles`);
 }
 
-/** Invite a new member to every linked repo. Failures are reported, never block joining. */
-async function grantRepoAccess(projectId: string, login: string | null, permission: GitHubPermission | null): Promise<string[]> {
-  const repos = await db.select().from(projectRepos).where(eq(projectRepos.projectId, projectId));
-  if (!repos.length || !permission) return [];
-  if (!login) return ["They haven't linked a GitHub account yet, so they weren't added to the repo."];
-  if (!githubConfigured()) return ["GitHub isn't configured on this server, so repo access wasn't granted."];
-  const notes: string[] = [];
-  for (const repo of repos) {
-    try {
-      await inviteCollaborator(repo.installationId, repo.fullName, login, permission);
-      notes.push(`Invited @${login} to ${repo.fullName} (${permission}).`);
-    } catch (err) {
-      notes.push(`Couldn't invite @${login} to ${repo.fullName}: ${(err as Error).message}. The app needs Administration: write.`);
-    }
-  }
-  return notes;
-}
 
 export async function leaveOrRemoveMember(slug: string, form: FormData): Promise<void> {
   const user = await requireUser();
