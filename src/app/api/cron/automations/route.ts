@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { runWeekly } from "@/lib/automations-db";
 import { runJamReminders } from "@/lib/jams-db";
 import { runWeeklyDigests } from "@/lib/alerts-db";
+import { pruneAnalytics } from "@/lib/analytics-db";
 import { env } from "@/lib/env";
 import { sendEmail } from "@/lib/mailer";
 
@@ -15,5 +16,6 @@ export async function GET(req: NextRequest) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
   const now = new Date();
+  await pruneAnalytics(db, now);
   return NextResponse.json({ fired: await runWeekly(db, now), jamReminders: await runJamReminders(db, now), digests: await runWeeklyDigests(db, now, sendEmail, env.appUrl) });
 }

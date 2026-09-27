@@ -16,7 +16,7 @@ import { eq } from "drizzle-orm";
 const url = process.env.DATABASE_URL ?? "postgres://guildhall:guildhall@localhost:5432/guildhall";
 const client = postgres(url, { max: 1, onnotice: () => {} });
 const db = drizzle(client, { schema });
-const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes, gddPages, gddLinks, channels, channelAccess, channelLinks, jams, jamSeekers, playtests, playtestTesters, feedbackReports, roadmapItems, roadmapVotes, savedSearches, moodboards, moodboardItems } = schema;
+const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes, gddPages, gddLinks, channels, channelAccess, channelLinks, jams, jamSeekers, playtests, playtestTesters, feedbackReports, roadmapItems, roadmapVotes, savedSearches, moodboards, moodboardItems, viewHits, portfolioClicks } = schema;
 
 await client`truncate users, projects, github_installations, github_deliveries restart identity cascade`;
 
@@ -316,6 +316,29 @@ await db.insert(savedSearches).values([
 const { alertForListing, runWeeklyDigests } = await import("../src/lib/alerts-db");
 for (const l of await db.select({ id: roleListings.id }).from(roleListings)) await alertForListing(db as never, l.id);
 await runWeeklyDigests(db as never, new Date(), async () => false, "http://localhost:3000");
+
+// C23: 30 days of synthetic analytics for Lukas's profile and Tidebound's public page.
+{
+  const { dayKey } = await import("../src/lib/analytics");
+  const sources = ["Google", "ArtStation", "Discord", "Guildhall", "direct", "itch.io", "X / Twitter"];
+  const rows: (typeof viewHits.$inferInsert)[] = [];
+  const clicks: (typeof portfolioClicks.$inferInsert)[] = [];
+  let seedN = 7;
+  const rand = () => ((seedN = (seedN * 16807) % 2147483647) / 2147483647);
+  for (let d = 29; d >= 0; d--) {
+    const day = dayKey(new Date(Date.now() - d * 86_400_000));
+    const growth = 1 + (29 - d) / 12;
+    for (const [type, id, base] of [["profile", ids.lukas, 3], ["project", tide.id, 6]] as const) {
+      const n = Math.round(base * growth * (0.6 + rand()));
+      for (let v = 0; v < n; v++) {
+        rows.push({ subjectType: type, subjectId: id, day, visitorHash: `seed-${type}-${d}-${v}`, source: sources[Math.floor(rand() * rand() * sources.length)], views: 1 + Math.floor(rand() * 2) });
+        if (type === "profile" && rand() < 0.35) clicks.push({ portfolioItemId: lukasPiece.id, day, visitorHash: `seed-${d}-${v}` });
+      }
+    }
+  }
+  await db.insert(viewHits).values(rows);
+  if (clicks.length) await db.insert(portfolioClicks).values(clicks);
+}
 
 await client.end();
 console.log(`seeded ${people.length} people, 2 projects, ${hooks.length} webhook deliveries`);

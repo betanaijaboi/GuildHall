@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Palette, FlaskConical, Map as MapIcon, BookOpen, FileSignature, Flag, ImageIcon, ListTodo, MessagesSquare, Newspaper, Settings, Users, Workflow, Zap } from "lucide-react";
+import { BarChart3, ScrollText, Palette, FlaskConical, Map as MapIcon, BookOpen, FileSignature, Flag, ImageIcon, ListTodo, MessagesSquare, Newspaper, Settings, Users, Workflow, Zap } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -17,7 +17,8 @@ const TABS = [
   { href: "playtests", match: "playtest", label: "Playtests", icon: FlaskConical },
   { href: "roadmap", match: "roadmap", label: "Roadmap", icon: MapIcon },
   { href: "updates", match: "updates", label: "Devlog", icon: Newspaper },
-  { href: "digest", match: "digest", label: "Digest", icon: BarChart3 },
+  { href: "digest", match: "digest", label: "Digest", icon: ScrollText },
+  { href: "analytics", match: "analytics", label: "Insights", icon: BarChart3 },
   { href: "automations", match: "automations", label: "Automations", icon: Zap },
   { href: "settings", match: "settings", label: "Settings", icon: Settings },
 ];

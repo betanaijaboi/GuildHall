@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { creditConfirmations, credits, endorsements, githubActivity, memberships, moodboards, portfolioItems, profileSkills, projects, users } from "@/db/schema";
 import { savePortfolioToMoodboard } from "@/app/actions/moodboards";
+import { ViewBeacon } from "@/components/view-beacon";
 import { toggleEndorsement } from "@/app/actions/rank";
 import { addCredit, confirmCredit, deleteCredit } from "@/app/actions/credits";
 import { BadgeCheck, Clapperboard, ExternalLink, Users as UsersIcon } from "lucide-react";
@@ -76,6 +77,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
 
   return (
     <div className="space-y-6">
+      <ViewBeacon type="profile" id={person.id} />
       <header className="card overflow-hidden p-0">
         <div className="relative h-28 sm:h-36" style={{ background: `linear-gradient(120deg, ${avatar.bg}, ${avatar.outfit})` }}>
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(255,255,255,0.18),transparent_50%)]" />
@@ -202,7 +204,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
                     <img src={item.imageUrl} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="aspect-video w-full object-cover" />
                   )}
                   <div className="p-4">
-                    <a href={item.url} target="_blank" rel="noreferrer nofollow" className="font-medium link">{item.title}</a>
+                    <a href={`/go/portfolio/${item.id}`} target="_blank" rel="noreferrer nofollow" className="font-medium link">{item.title}</a>
                     {item.description && <p className="mt-1 text-sm text-fg-muted">{item.description}</p>}
                     {myBoards.length > 0 && (
                       <form action={savePortfolioToMoodboard} className="mt-3 flex gap-1.5">

@@ -169,6 +169,13 @@
       "when": 1790521510824,
       "tag": "0023_discord",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790522033977,
+      "tag": "0024_analytics",
+      "breakpoints": true
     }
   ]
 }

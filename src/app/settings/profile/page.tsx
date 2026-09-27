@@ -33,6 +33,10 @@ export default async function EditProfilePage({ searchParams }: { searchParams: 
         </div>
         <span className="btn-secondary"><Palette size={16} /> Customize</span>
       </Link>
+      <Link href="/settings/analytics" className="card card-hover flex items-center gap-3 text-sm">
+        <span className="text-xl">📈</span>
+        <span className="flex-1"><span className="font-medium">Profile analytics</span><span className="block text-fg-muted">Visitors, where they come from, and which portfolio pieces they open.</span></span>
+      </Link>
       <Link href="/settings/payouts" className="card card-hover flex items-center gap-3 text-sm">
         <Wallet size={20} className="text-accent" />
         <span className="flex-1">Payouts: connect an account to get paid for contract milestones</span>

@@ -1050,3 +1050,36 @@ export const discordWebhooks = pgTable("discord_webhooks", {
   lastSentAt: timestamp("last_sent_at", { withTimezone: true }),
   createdAt: createdAt(),
 });
+
+// --- Analytics (C23) ---------------------------------------------------------------------------------------
+
+export const viewSubjectEnum = pgEnum("view_subject", ["profile", "project"]);
+
+/**
+ * One row per visitor per subject per day. `visitorHash` is an HMAC of the day and the visitor
+ * (user id, or IP + user agent for signed-out visitors) with a secret salt, so raw IPs are never
+ * stored and hashes can't be linked across days.
+ */
+export const viewHits = pgTable(
+  "view_hits",
+  {
+    subjectType: viewSubjectEnum("subject_type").notNull(),
+    subjectId: uuid("subject_id").notNull(),
+    day: text("day").notNull(),
+    visitorHash: text("visitor_hash").notNull(),
+    source: text("source").notNull().default("direct"),
+    views: integer("views").notNull().default(1),
+  },
+  (t) => [primaryKey({ columns: [t.subjectType, t.subjectId, t.day, t.visitorHash] }), index("view_hits_subject_day_idx").on(t.subjectType, t.subjectId, t.day)],
+);
+
+/** Outbound portfolio clicks via /go/portfolio/[id] (same privacy model). */
+export const portfolioClicks = pgTable(
+  "portfolio_clicks",
+  {
+    portfolioItemId: uuid("portfolio_item_id").notNull().references(() => portfolioItems.id, { onDelete: "cascade" }),
+    day: text("day").notNull(),
+    visitorHash: text("visitor_hash").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.portfolioItemId, t.day, t.visitorHash] })],
+);

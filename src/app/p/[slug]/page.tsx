@@ -1,6 +1,7 @@
 import { FlaskConical } from "lucide-react";
 import { and, desc, eq } from "drizzle-orm";
 import Link from "next/link";
+import { ViewBeacon } from "@/components/view-beacon";
 import { db } from "@/db";
 import { applications, memberships, milestones, playtests, posts, roleListings, users } from "@/db/schema";
 import { applyToListing } from "@/app/actions/project";
@@ -47,6 +48,7 @@ export default async function ProjectPublicPage({
 
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_320px]">
+      <ViewBeacon type="project" id={project.id} />
       <div className="space-y-6">
         {applied && <p className="rounded-md border border-good/40 p-3 text-sm text-good">Application sent. The team will get back to you.</p>}
         {project.pitch && <p className="whitespace-pre-wrap text-lg">{project.pitch}</p>}
