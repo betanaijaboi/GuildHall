@@ -8,6 +8,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  real,
   text,
   timestamp,
   uniqueIndex,
@@ -151,7 +152,7 @@ export const channels = pgTable(
 
 /** A card attached to a message, e.g. a GitHub PR or issue. Rendered by the client. */
 export type MessageCard = {
-  kind: "pull_request" | "issue" | "push" | "release" | "check" | "digest";
+  kind: "pull_request" | "issue" | "push" | "release" | "check" | "digest" | "asset";
   title: string;
   url?: string;
   repo?: string;
@@ -265,4 +266,76 @@ export const githubDeliveries = pgTable("github_deliveries", {
   deliveryId: text("delivery_id").primaryKey(),
   event: text("event").notNull(),
   receivedAt: createdAt(),
+});
+
+// --- Asset review (C2) -----------------------------------------------------------------------
+
+export const assetKindEnum = pgEnum("asset_kind", ["image", "video", "model"]);
+export const assetStatusEnum = pgEnum("asset_status", ["in_review", "changes_requested", "approved"]);
+export const reviewDecisionEnum = pgEnum("review_decision", ["approved", "changes_requested"]);
+
+export const assets = pgTable(
+  "assets",
+  {
+    id: id(),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    kind: assetKindEnum("kind").notNull(),
+    status: assetStatusEnum("status").notNull().default("in_review"),
+    /** Optional path of the source file in the linked repo, for LFS lock status. */
+    repoPath: text("repo_path"),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("assets_project_updated_idx").on(t.projectId, t.updatedAt)],
+);
+
+export const assetVersions = pgTable(
+  "asset_versions",
+  {
+    id: id(),
+    assetId: uuid("asset_id").notNull().references(() => assets.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    fileKey: text("file_key").notNull(),
+    mime: text("mime").notNull(),
+    size: integer("size").notNull(),
+    note: text("note").notNull().default(""),
+    uploadedBy: uuid("uploaded_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("asset_versions_asset_version_idx").on(t.assetId, t.version)],
+);
+
+/**
+ * A pinned comment. Images/videos use normalised x/y (0–1) of the frame; videos add timeSec;
+ * models store a surface point from <model-viewer> as "x y z" (plus its normal).
+ */
+export const assetComments = pgTable(
+  "asset_comments",
+  {
+    id: id(),
+    assetId: uuid("asset_id").notNull().references(() => assets.id, { onDelete: "cascade" }),
+    versionId: uuid("version_id").notNull().references(() => assetVersions.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id").references(() => users.id, { onDelete: "set null" }),
+    body: text("body").notNull(),
+    x: real("x"),
+    y: real("y"),
+    timeSec: real("time_sec"),
+    position3d: text("position_3d"),
+    normal3d: text("normal_3d"),
+    resolved: boolean("resolved").notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [index("asset_comments_version_idx").on(t.versionId)],
+);
+
+export const assetReviews = pgTable("asset_reviews", {
+  id: id(),
+  assetId: uuid("asset_id").notNull().references(() => assets.id, { onDelete: "cascade" }),
+  versionId: uuid("version_id").notNull().references(() => assetVersions.id, { onDelete: "cascade" }),
+  reviewerId: uuid("reviewer_id").references(() => users.id, { onDelete: "set null" }),
+  decision: reviewDecisionEnum("decision").notNull(),
+  note: text("note").notNull().default(""),
+  createdAt: createdAt(),
 });

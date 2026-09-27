@@ -17,10 +17,11 @@ The product spec, research and roadmap live in the private design vault
 | **Build** | Per-project channels (`#general #design #art #code #audio #builds #github`), threads, and live updates (SSE). A task board with GitHub issues synced in. Roles: owner, lead, member, contractor, guest |
 | **Show** | Milestones per pipeline stage with default checklists; completing one advances the stage. Team or public devlog posts. A public project page. A weekly digest built from real activity, which can be posted to `#general` |
 | **GitHub** | GitHub App sign-in. Verified installation ownership. Repo linking. HMAC-verified, idempotent webhooks: push, PR, review, issue, comment, CI failure and release go to chat cards, with threading and live PR state. Issues become tasks (assign, close, reopen). Accepted members get invited as collaborators, and removed members lose access. An engine setup PR (Unity, Unreal, Godot) with LFS `lockable` rules, CI and issue templates. "Merged PRs" evidence on profiles |
+| **Asset review** | Upload PNG, JPEG, WebP, GIF, MP4, WebM or GLB (checked by content sniffing; SVG and HTML are rejected). Pin comments on images, frame-accurate pins on video with a timeline, and surface hotspots on 3D models via `<model-viewer>`. Versions, approve or request changes (you can't approve your own upload), threaded activity in `#art`. Files are served only to members, with Range support |
 | **Team gaps** | Compares the roster with the roles the current stage needs, and suggests people ranked by skill, engine and availability |
 
-**Not in the MVP** (Scope B in the roadmap): payments and escrow, contracts,
-voice/video, asset review, two-way issue sync, Discord bridge, desktop and
+**Not in the MVP yet** (see the build order in the vault's competitor-components.md): payments and escrow, contracts,
+voice/video, two-way issue sync, Discord bridge, desktop and
 mobile apps, verified skill badges beyond the merged-PR count, and direct
 invites.
 

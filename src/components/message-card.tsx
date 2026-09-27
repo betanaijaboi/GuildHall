@@ -1,4 +1,4 @@
-import { CircleDot, GitMerge, GitPullRequest, Package, ScrollText, Upload, XCircle, type LucideIcon } from "lucide-react";
+import { CircleDot, GitMerge, GitPullRequest, ImageIcon, Package, ScrollText, Upload, XCircle, type LucideIcon } from "lucide-react";
 import type { MessageCard } from "@/db/schema";
 
 const STATE_COLOR: Record<string, string> = {
@@ -8,11 +8,14 @@ const STATE_COLOR: Record<string, string> = {
   draft: "#9a96b3",
   failure: "#fb7185",
   timed_out: "#fb7185",
+  in_review: "#fbbf24",
+  changes_requested: "#fb7185",
+  approved: "#34d399",
 };
 
 function iconFor(card: MessageCard): LucideIcon {
   if (card.kind === "pull_request") return card.state === "merged" ? GitMerge : GitPullRequest;
-  return { issue: CircleDot, push: Upload, release: Package, check: XCircle, digest: ScrollText, pull_request: GitPullRequest }[card.kind];
+  return { issue: CircleDot, push: Upload, release: Package, check: XCircle, digest: ScrollText, pull_request: GitPullRequest, asset: ImageIcon }[card.kind];
 }
 
 export function MessageCardView({ card }: { card: MessageCard }) {
@@ -30,16 +33,20 @@ export function MessageCardView({ card }: { card: MessageCard }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             {card.url ? (
-              <a href={card.url} target="_blank" rel="noreferrer" className="truncate font-semibold hover:underline">
+              <a
+                href={card.url}
+                {...(card.url.startsWith("/") ? {} : { target: "_blank", rel: "noreferrer" })}
+                className="truncate font-semibold hover:underline"
+              >
                 {card.title}
-                {card.number ? <span className="font-normal text-fg-muted"> #{card.number}</span> : null}
+                {card.number ? <span className="font-normal text-fg-muted"> {card.kind === "asset" ? `v${card.number}` : `#${card.number}`}</span> : null}
               </a>
             ) : (
               <span className="truncate font-semibold">{card.title}</span>
             )}
             {card.state && (
               <span className="ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ color, background: `color-mix(in oklab, ${color} 15%, transparent)` }}>
-                {card.state.replace("_", " ")}
+                {card.state.replaceAll("_", " ")}
               </span>
             )}
           </div>
