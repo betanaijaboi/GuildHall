@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Space_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 import { LogOut, Plus, Bell } from "lucide-react";
 import { GithubIcon } from "@/components/icons";
 import Link from "next/link";
@@ -11,8 +11,17 @@ import { db } from "@/db";
 import { unreadCount } from "@/lib/alerts-db";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const grotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-grotesk", weight: ["500", "600", "700"] });
+// Self-hosted variable fonts (from @fontsource-variable), so builds never depend on fetching Google Fonts.
+const inter = localFont({
+  src: [{ path: "../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2", weight: "100 900", style: "normal" }],
+  variable: "--font-inter",
+  display: "swap",
+});
+const grotesk = localFont({
+  src: [{ path: "../../node_modules/@fontsource-variable/space-grotesk/files/space-grotesk-latin-wght-normal.woff2", weight: "300 700", style: "normal" }],
+  variable: "--font-grotesk",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: { default: "Guildhall — find your party, build your game", template: "%s · Guildhall" },
