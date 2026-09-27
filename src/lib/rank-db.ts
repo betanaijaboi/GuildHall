@@ -28,7 +28,7 @@ export async function loadRankInputs(db: Db, userIds: string[]): Promise<Map<str
     db.select({ id: engagementReviews.toId, rating: engagementReviews.rating }).from(engagementReviews).where(inArray(engagementReviews.toId, userIds)),
     // Guildhall-verified credits, or self-reported ones a teammate confirmed.
     db.select({ id: credits.userId, n: sql<number>`count(*)::int` }).from(credits)
-      .where(and(inArray(credits.userId, userIds), sql`(${credits.source} = 'guildhall' or exists (select 1 from ${creditConfirmations} cc where cc.credit_id = ${credits.id}))`))
+      .where(and(inArray(credits.userId, userIds), sql`(${credits.source} = 'guildhall' or exists (select 1 from ${creditConfirmations} cc where cc.credit_id = "credits"."id"))`))
       .groupBy(credits.userId),
   ]);
   for (const r of prs) { const id = byLogin.get(r.login!); if (id) map.get(id)!.mergedPrs = r.n; }

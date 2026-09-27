@@ -42,7 +42,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
   const browse = await db
     .select({
       project: projects,
-      openRoles: sql<number>`(select count(*)::int from ${roleListings} where ${roleListings.projectId} = ${projects.id} and ${roleListings.status} = 'open')`,
+      openRoles: sql<number>`(select count(*)::int from ${roleListings} where "role_listings"."project_id" = "projects"."id" and "role_listings"."status" = 'open')`,
     })
     .from(projects)
     .where(and(...where))

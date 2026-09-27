@@ -86,6 +86,8 @@ export const portfolioItems = pgTable("portfolio_items", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   url: text("url").notNull(),
+  /** Optional https image (e.g. the ArtStation/Behance cover); used on profiles and moodboards (C17). */
+  imageUrl: text("image_url"),
   description: text("description").notNull().default(""),
   createdAt: createdAt(),
 });
@@ -990,4 +992,34 @@ export const notifications = pgTable(
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("notifications_dedupe_idx").on(t.userId, t.dedupeKey), index("notifications_user_idx").on(t.userId, t.createdAt)],
+);
+
+// --- Moodboards (C17) ----------------------------------------------------------------------------------
+
+export const moodboards = pgTable("moodboards", {
+  id: id(),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+});
+
+export const moodboardItemKindEnum = pgEnum("moodboard_item_kind", ["image", "portfolio", "asset", "color", "note"]);
+
+export const moodboardItems = pgTable(
+  "moodboard_items",
+  {
+    id: id(),
+    boardId: uuid("board_id").notNull().references(() => moodboards.id, { onDelete: "cascade" }),
+    kind: moodboardItemKindEnum("kind").notNull(),
+    /** image: https image URL; others: optional source link. */
+    url: text("url"),
+    caption: text("caption").notNull().default(""),
+    color: text("color"),
+    portfolioItemId: uuid("portfolio_item_id").references(() => portfolioItems.id, { onDelete: "cascade" }),
+    assetId: uuid("asset_id").references(() => assets.id, { onDelete: "cascade" }),
+    addedBy: uuid("added_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("moodboard_items_board_idx").on(t.boardId, t.createdAt), uniqueIndex("moodboard_items_portfolio_idx").on(t.boardId, t.portfolioItemId)],
 );

@@ -2,7 +2,8 @@ import { and, count, desc, eq, ne, sql } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { creditConfirmations, credits, endorsements, githubActivity, memberships, portfolioItems, profileSkills, projects, users } from "@/db/schema";
+import { creditConfirmations, credits, endorsements, githubActivity, memberships, moodboards, portfolioItems, profileSkills, projects, users } from "@/db/schema";
+import { savePortfolioToMoodboard } from "@/app/actions/moodboards";
 import { toggleEndorsement } from "@/app/actions/rank";
 import { addCredit, confirmCredit, deleteCredit } from "@/app/actions/credits";
 import { BadgeCheck, Clapperboard, ExternalLink, Users as UsersIcon } from "lucide-react";
@@ -27,6 +28,15 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
   if (!person) notFound();
   const viewer = await getCurrentUser();
 
+  // Moodboards on projects the viewer works on (C17): pin pieces from this portfolio.
+  const myBoards = viewer
+    ? await db
+        .select({ id: moodboards.id, name: moodboards.name, project: projects.name })
+        .from(moodboards)
+        .innerJoin(projects, eq(projects.id, moodboards.projectId))
+        .innerJoin(memberships, and(eq(memberships.projectId, moodboards.projectId), eq(memberships.userId, viewer.id), ne(memberships.role, "guest")))
+        .limit(30)
+    : [];
   const [skills, portfolio, projectRows, merged] = await Promise.all([
     db.select().from(profileSkills).where(eq(profileSkills.userId, person.id)),
     db.select().from(portfolioItems).where(eq(portfolioItems.userId, person.id)),
@@ -50,7 +60,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
   ]);
   const endorsedBy = (skillId: string) => endorsed.filter((e) => e.skillId === skillId);
   const creditRows = await db
-    .select({ credit: credits, confirmations: sql<number>`(select count(*)::int from ${creditConfirmations} cc where cc.credit_id = ${credits.id})` })
+    .select({ credit: credits, confirmations: sql<number>`(select count(*)::int from ${creditConfirmations} cc where cc.credit_id = "credits"."id")` })
     .from(credits)
     .where(eq(credits.userId, person.id))
     .orderBy(desc(credits.year));
@@ -186,9 +196,24 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2">
               {portfolio.map((item) => (
-                <li key={item.id} className="card card-hover">
-                  <a href={item.url} target="_blank" rel="noreferrer nofollow" className="font-medium link">{item.title}</a>
-                  {item.description && <p className="mt-1 text-sm text-fg-muted">{item.description}</p>}
+                <li key={item.id} className="card card-hover overflow-hidden p-0">
+                  {item.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.imageUrl} alt={item.title} loading="lazy" referrerPolicy="no-referrer" className="aspect-video w-full object-cover" />
+                  )}
+                  <div className="p-4">
+                    <a href={item.url} target="_blank" rel="noreferrer nofollow" className="font-medium link">{item.title}</a>
+                    {item.description && <p className="mt-1 text-sm text-fg-muted">{item.description}</p>}
+                    {myBoards.length > 0 && (
+                      <form action={savePortfolioToMoodboard} className="mt-3 flex gap-1.5">
+                        <input type="hidden" name="portfolioItemId" value={item.id} />
+                        <select name="boardId" className="input py-1 text-xs" aria-label="Moodboard">
+                          {myBoards.map((b) => <option key={b.id} value={b.id}>{b.project} · {b.name}</option>)}
+                        </select>
+                        <button className="btn-secondary shrink-0 py-1 text-xs">Save to moodboard</button>
+                      </form>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

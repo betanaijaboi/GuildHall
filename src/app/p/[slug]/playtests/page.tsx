@@ -29,7 +29,7 @@ export default async function PlaytestsPage({ params, searchParams }: { params: 
 
   const [tests, reports, keys, repo] = await Promise.all([
     db
-      .select({ pt: playtests, testers: sql<number>`(select count(*)::int from ${playtestTesters} t where t.playtest_id = ${playtests.id})` })
+      .select({ pt: playtests, testers: sql<number>`(select count(*)::int from ${playtestTesters} t where t.playtest_id = "playtests"."id")` })
       .from(playtests)
       .where(eq(playtests.projectId, project.id))
       .orderBy(desc(playtests.createdAt)),

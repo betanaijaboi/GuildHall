@@ -112,7 +112,8 @@ export default async function EditProfilePage({ searchParams }: { searchParams: 
         <form action={addPortfolioItem} className="card grid gap-3 sm:grid-cols-2">
           <input name="title" required placeholder="Title" className="input" />
           <input name="url" required type="url" placeholder="https://www.artstation.com/…" className="input" />
-          <input name="description" placeholder="Short description" className="input sm:col-span-2" />
+          <input name="description" placeholder="Short description" className="input" />
+          <input name="imageUrl" type="url" placeholder="Cover image link (https, optional)" className="input" />
           <button className="btn-secondary sm:col-span-2">Add portfolio item</button>
         </form>
       </section>

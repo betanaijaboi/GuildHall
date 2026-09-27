@@ -34,7 +34,7 @@ export default async function AssetsPage({ params, searchParams }: { params: Pro
       latest: sql<{ id: string; version: number; mime: string }>`(
         select json_build_object('id', v.id, 'version', v.version, 'mime', v.mime)
         from ${assetVersions} v where v.asset_id = ${assets.id} order by v.version desc limit 1)`,
-      openComments: sql<number>`(select count(*)::int from ${assetComments} c where c.asset_id = ${assets.id} and not c.resolved)`,
+      openComments: sql<number>`(select count(*)::int from ${assetComments} c where c.asset_id = "assets"."id" and not c.resolved)`,
     })
     .from(assets)
     .leftJoin(users, eq(users.id, assets.createdBy))

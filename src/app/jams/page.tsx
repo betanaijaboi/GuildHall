@@ -20,8 +20,8 @@ export default async function JamsPage() {
   const rows = await db
     .select({
       jam: jams,
-      teams: sql<number>`(select count(*)::int from ${jamTeams} t where t.jam_id = ${jams.id})`,
-      seekers: sql<number>`(select count(*)::int from ${jamSeekers} s where s.jam_id = ${jams.id})`,
+      teams: sql<number>`(select count(*)::int from ${jamTeams} t where t.jam_id = "jams"."id")`,
+      seekers: sql<number>`(select count(*)::int from ${jamSeekers} s where s.jam_id = "jams"."id")`,
     })
     .from(jams)
     .where(sql`${jams.endsAt} > now() - interval '60 days'`)

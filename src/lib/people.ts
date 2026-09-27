@@ -22,10 +22,10 @@ export async function searchPeople(db: Db, f: PeopleFilters, limit = 50) {
     );
   }
   if (f.skill) {
-    where.push(sql`exists (select 1 from ${profileSkills} where ${profileSkills.userId} = ${users.id} and ${profileSkills.skillId} = ${f.skill})`);
+    where.push(sql`exists (select 1 from ${profileSkills} where "profile_skills"."user_id" = "users"."id" and ${profileSkills.skillId} = ${f.skill})`);
   }
   if (f.discipline && /^[a-z]+$/.test(f.discipline)) {
-    where.push(sql`exists (select 1 from ${profileSkills} where ${profileSkills.userId} = ${users.id} and ${profileSkills.skillId} like ${`${f.discipline}.%`})`);
+    where.push(sql`exists (select 1 from ${profileSkills} where "profile_skills"."user_id" = "users"."id" and ${profileSkills.skillId} like ${`${f.discipline}.%`})`);
   }
   if (f.engine) where.push(sql`${users.engines} @> array[${f.engine}]::text[]`);
   if (f.engagement) where.push(sql`${users.engagements} @> array[${f.engagement}]::text[]`);

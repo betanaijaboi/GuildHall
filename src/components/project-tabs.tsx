@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, FlaskConical, Map as MapIcon, BookOpen, FileSignature, Flag, ImageIcon, ListTodo, MessagesSquare, Newspaper, Settings, Users, Workflow, Zap } from "lucide-react";
+import { BarChart3, Palette, FlaskConical, Map as MapIcon, BookOpen, FileSignature, Flag, ImageIcon, ListTodo, MessagesSquare, Newspaper, Settings, Users, Workflow, Zap } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -8,6 +8,7 @@ const TABS = [
   { href: "workspace", match: "workspace", label: "Chat", icon: MessagesSquare },
   { href: "gdd", match: "gdd", label: "GDD", icon: BookOpen },
   { href: "assets", match: "assets", label: "Assets", icon: ImageIcon },
+  { href: "moodboards", match: "moodboards", label: "Moodboards", icon: Palette },
   { href: "pipelines", match: "pipelines", label: "Pipelines", icon: Workflow },
   { href: "tasks", match: "tasks", label: "Tasks", icon: ListTodo },
   { href: "milestones", match: "milestones", label: "Quest log", icon: Flag },

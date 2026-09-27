@@ -16,7 +16,7 @@ import { eq } from "drizzle-orm";
 const url = process.env.DATABASE_URL ?? "postgres://guildhall:guildhall@localhost:5432/guildhall";
 const client = postgres(url, { max: 1, onnotice: () => {} });
 const db = drizzle(client, { schema });
-const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes, gddPages, gddLinks, channels, channelAccess, channelLinks, jams, jamSeekers, playtests, playtestTesters, feedbackReports, roadmapItems, roadmapVotes, savedSearches } = schema;
+const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes, gddPages, gddLinks, channels, channelAccess, channelLinks, jams, jamSeekers, playtests, playtestTesters, feedbackReports, roadmapItems, roadmapVotes, savedSearches, moodboards, moodboardItems } = schema;
 
 await client`truncate users, projects, github_installations, github_deliveries restart identity cascade`;
 
@@ -292,6 +292,20 @@ const roadmap = await db.insert(roadmapItems).values([
 ]).returning();
 const voteFor = (title: string, handles: string[]) => handles.map((h) => ({ itemId: roadmap.find((r) => r.title === title)!.id, userId: ids[h] }));
 await db.insert(roadmapVotes).values([...voteFor("Co-op sailing", ["priya", "jonas", "elena", "tomas"]), ...voteFor("Steam Deck controls", ["tomas", "elena"]), ...voteFor("Name your boat", ["jonas"])]);
+
+// C17: portfolio covers and a Tidebound moodboard with a portfolio piece, references, colours and a note.
+await db.update(portfolioItems).set({ imageUrl: "/seed/harbour.svg" }).where(eq(portfolioItems.userId, ids.lukas));
+const [lukasPiece] = await db.select().from(portfolioItems).where(eq(portfolioItems.userId, ids.lukas)).limit(1);
+const [harbourBoard] = await db.insert(moodboards).values({ projectId: tide.id, name: "Harbour at dusk", createdBy: ids.amara }).returning();
+await db.insert(moodboards).values({ projectId: tide.id, name: "Storm palette", createdBy: ids.mei });
+await db.insert(moodboardItems).values([
+  { boardId: harbourBoard.id, kind: "portfolio", portfolioItemId: lukasPiece.id, addedBy: ids.amara },
+  { boardId: harbourBoard.id, kind: "image", url: "/seed/storm.svg", caption: "Storm silhouette read: boat must pop against the sky", addedBy: ids.mei },
+  { boardId: harbourBoard.id, kind: "color", color: "#e06666", caption: "Dusk coral", addedBy: ids.amara },
+  { boardId: harbourBoard.id, kind: "image", url: "/seed/lighthouse.svg", caption: "Lighthouse as the only warm light source", addedBy: ids.amara },
+  { boardId: harbourBoard.id, kind: "color", color: "#274a78", caption: "Harbour water", addedBy: ids.amara },
+  { boardId: harbourBoard.id, kind: "note", caption: "Salt-worn wood, no pure blacks, warm rim light on everything wet.", addedBy: ids.amara },
+]);
 
 // C16: saved role searches, alerts for open roles, and a first weekly digest for everyone.
 await db.insert(savedSearches).values([

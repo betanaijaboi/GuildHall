@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
 import { portfolioItems, profileSkills, users } from "@/db/schema";
+import { safeImageUrl } from "@/lib/moodboards";
 import { requireUser } from "@/lib/auth";
 import { avatarSchema } from "@/lib/avatar";
 import { ENGAGEMENTS, ENGINES, isSkillId, PLATFORMS, SENIORITIES } from "@/lib/taxonomy";
@@ -65,6 +66,12 @@ const portfolioSchema = z.object({
   title: z.string().trim().min(1).max(120),
   url: z.string().trim().url().refine((u) => /^https?:\/\//.test(u), "Must be an http(s) link"),
   description: z.string().trim().max(500),
+  imageUrl: z.string().trim().max(1000).transform((v, ctx) => {
+    if (!v) return null;
+    const safe = safeImageUrl(v);
+    if (!safe) ctx.addIssue({ code: "custom", message: "Image must be an https link" });
+    return safe;
+  }),
 });
 
 export async function addPortfolioItem(form: FormData): Promise<void> {
@@ -73,6 +80,7 @@ export async function addPortfolioItem(form: FormData): Promise<void> {
     title: form.get("title"),
     url: form.get("url"),
     description: form.get("description") ?? "",
+    imageUrl: form.get("imageUrl") ?? "",
   });
   await db.insert(portfolioItems).values({ userId: user.id, ...data });
   revalidatePath("/settings/profile");
