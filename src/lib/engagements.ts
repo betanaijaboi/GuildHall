@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { Db } from "@/db";
 import { engagementMilestones, engagements, payoutAccounts, users } from "@/db/schema";
+import { renderContract, type ContractTerms } from "./contracts";
 import { contractFeeCents, formatMoney, milestoneFees } from "./fees";
 import { channelByName, postMessage } from "./messages";
 import type { PaymentProvider } from "./payments/provider";
@@ -91,4 +92,21 @@ export async function releaseForAsset(db: Db, provider: PaymentProvider | null, 
 export async function partiesOf(db: Db, e: Engagement) {
   const people = await db.select().from(users).where(inArray(users.id, [e.clientId, e.makerId]));
   return { client: people.find((p) => p.id === e.clientId)!, maker: people.find((p) => p.id === e.makerId)! };
+}
+
+export type StoredTerms = Omit<ContractTerms, "kind" | "projectName" | "clientName" | "makerName" | "roleTitle" | "currency" | "milestones">;
+
+export async function renderEngagementContract(db: Db, e: Engagement, projectName: string): Promise<string> {
+  const { client, maker } = await partiesOf(db, e);
+  const ms = await db.select().from(engagementMilestones).where(eq(engagementMilestones.engagementId, e.id)).orderBy(asc(engagementMilestones.position));
+  return renderContract({
+    ...(e.terms as StoredTerms),
+    kind: e.kind,
+    projectName,
+    clientName: client.name,
+    makerName: maker.name,
+    roleTitle: e.title,
+    currency: e.currency,
+    milestones: ms.map((m) => ({ title: m.title, amountCents: m.amountCents })),
+  });
 }

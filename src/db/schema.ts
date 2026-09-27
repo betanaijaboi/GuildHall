@@ -471,3 +471,61 @@ export const paymentEvents = pgTable("payment_events", {
   type: text("type").notNull(),
   receivedAt: createdAt(),
 });
+
+// --- Service gigs (C10) ------------------------------------------------------------------------
+
+export const gigStatusEnum = pgEnum("gig_status", ["active", "paused"]);
+export const gigTierEnum = pgEnum("gig_tier", ["basic", "standard", "premium"]);
+
+export const gigs = pgTable(
+  "gigs",
+  {
+    id: id(),
+    sellerId: uuid("seller_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    skillId: text("skill_id").notNull(),
+    engines: text("engines").array().notNull().default(sql`'{}'::text[]`),
+    description: text("description").notNull().default(""),
+    /** Delivered formats, e.g. "FBX + textures (PBR, 2K)", "WAV 48kHz + FMOD bank". */
+    formats: text("formats").notNull().default(""),
+    coverUrl: text("cover_url"),
+    currency: text("currency").notNull().default("usd"),
+    status: gigStatusEnum("status").notNull().default("active"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("gigs_skill_idx").on(t.skillId)],
+);
+
+export const gigTiers = pgTable(
+  "gig_tiers",
+  {
+    gigId: uuid("gig_id").notNull().references(() => gigs.id, { onDelete: "cascade" }),
+    tier: gigTierEnum("tier").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    priceCents: integer("price_cents").notNull(),
+    deliveryDays: integer("delivery_days").notNull(),
+    revisions: integer("revisions").notNull().default(1),
+  },
+  (t) => [primaryKey({ columns: [t.gigId, t.tier] })],
+);
+
+export const gigAddons = pgTable("gig_addons", {
+  id: id(),
+  gigId: uuid("gig_id").notNull().references(() => gigs.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  priceCents: integer("price_cents").notNull(),
+});
+
+export const gigOrders = pgTable("gig_orders", {
+  id: id(),
+  gigId: uuid("gig_id").notNull().references(() => gigs.id, { onDelete: "restrict" }),
+  buyerId: uuid("buyer_id").notNull().references(() => users.id),
+  tier: gigTierEnum("tier").notNull(),
+  addonIds: text("addon_ids").array().notNull().default(sql`'{}'::text[]`),
+  totalCents: integer("total_cents").notNull(),
+  brief: text("brief").notNull().default(""),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  engagementId: uuid("engagement_id").notNull().references(() => engagements.id, { onDelete: "cascade" }),
+  createdAt: createdAt(),
+});

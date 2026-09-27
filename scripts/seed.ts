@@ -14,7 +14,7 @@ import { templateById } from "../src/lib/pipelines";
 const url = process.env.DATABASE_URL ?? "postgres://guildhall:guildhall@localhost:5432/guildhall";
 const client = postgres(url, { max: 1, onnotice: () => {} });
 const db = drizzle(client, { schema });
-const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks } = schema;
+const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons } = schema;
 
 await client`truncate users, projects, github_installations, github_deliveries restart identity cascade`;
 
@@ -171,6 +171,21 @@ await db.insert(roleListings).values([
   { projectId: ash.id, skillId: "narrative.narrative_direction", title: "Narrative director", engagement: "revshare", hoursPerWeek: 8, compensation: "Rev-share" },
   { projectId: ash.id, skillId: "art.concept", title: "Concept artist — characters & castles", engagement: "paid", compensation: "Per piece" },
 ]);
+
+// Service gigs.
+for (const g of [
+  { seller: "rafael", title: "Adaptive combat music for your game", skillId: "audio.composition", engines: ["unity", "godot"], formats: "WAV 48kHz stems + FMOD bank",
+    tiers: [["basic", "1 loopable track", 15000, 5, 1], ["standard", "3 adaptive intensity layers", 40000, 10, 2], ["premium", "Full FMOD implementation", 75000, 14, 3]],
+    addons: [["Stems for each layer", 6000], ["Trailer licence", 10000]] },
+  { seller: "sofia", title: "Game-ready character rig with facial controls", skillId: "art.rigging", engines: ["unity", "unreal"], formats: "FBX + Maya/Blender source",
+    tiers: [["basic", "Body rig", 20000, 4, 1], ["standard", "Body + facial rig", 45000, 8, 2]], addons: [] },
+  { seller: "lukas", title: "Stylised environment props (Blender to engine)", skillId: "art.environment", engines: ["godot", "unreal"], formats: "GLB/FBX + PBR textures 2K",
+    tiers: [["basic", "3 props", 12000, 5, 1], ["standard", "8 props", 28000, 9, 2], ["premium", "15 props + modular kit", 50000, 14, 2]], addons: [["4K textures", 5000]] },
+] as const) {
+  const [gig] = await db.insert(gigs).values({ sellerId: ids[g.seller], title: g.title, skillId: g.skillId, engines: [...g.engines], formats: g.formats, description: `${g.title}. Tell me about your game and I'll match its style.` }).returning();
+  await db.insert(gigTiers).values(g.tiers.map(([tier, name, priceCents, deliveryDays, revisions]) => ({ gigId: gig.id, tier, name, priceCents, deliveryDays, revisions })));
+  if (g.addons.length) await db.insert(gigAddons).values(g.addons.map(([name, priceCents]) => ({ gigId: gig.id, name, priceCents })));
+}
 
 await client.end();
 console.log(`seeded ${people.length} people, 2 projects, ${hooks.length} webhook deliveries`);

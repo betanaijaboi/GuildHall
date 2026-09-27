@@ -43,6 +43,13 @@
       "when": 1790515396019,
       "tag": "0005_contracts_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790515949790,
+      "tag": "0006_service_gigs",
+      "breakpoints": true
     }
   ]
 }

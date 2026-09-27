@@ -8,8 +8,8 @@ import { db } from "@/db";
 import { assets, engagementMilestones, engagementReviews, engagements, memberships, payoutAccounts } from "@/db/schema";
 import { loadProject, roleAtLeast } from "@/lib/access";
 import { requireUser } from "@/lib/auth";
-import { contractHash, renderContract, type ContractTerms } from "@/lib/contracts";
-import { checkoutAmounts, partiesOf, releaseMilestone } from "@/lib/engagements";
+import { contractHash } from "@/lib/contracts";
+import { checkoutAmounts, partiesOf, releaseMilestone, renderEngagementContract } from "@/lib/engagements";
 import { env } from "@/lib/env";
 import { parseMoney } from "@/lib/fees";
 import { channelByName, postMessage } from "@/lib/messages";
@@ -105,26 +105,11 @@ export async function createEngagement(slug: string, form: FormData): Promise<vo
   redirect(`/p/${slug}/contracts/${e.id}`);
 }
 
-async function renderFor(e: typeof engagements.$inferSelect, projectName: string) {
-  const { client, maker } = await partiesOf(db, e);
-  const ms = await db.select().from(engagementMilestones).where(eq(engagementMilestones.engagementId, e.id)).orderBy(asc(engagementMilestones.position));
-  const t = e.terms as Omit<ContractTerms, "kind" | "projectName" | "clientName" | "makerName" | "roleTitle" | "currency" | "milestones">;
-  return renderContract({
-    ...t,
-    kind: e.kind,
-    projectName,
-    clientName: client.name,
-    makerName: maker.name,
-    roleTitle: e.title,
-    currency: e.currency,
-    milestones: ms.map((m) => ({ title: m.title, amountCents: m.amountCents })),
-  });
-}
 
 export async function sendContract(slug: string, id: string): Promise<void> {
   const { user, project, e } = await loadEngagement(slug, id);
   if (e.clientId !== user.id || e.status !== "draft") throw new Error("Only the client can send a draft");
-  const text = await renderFor(e, project.name);
+  const text = await renderEngagementContract(db, e, project.name);
   await db.update(engagements).set({ status: "sent", contractText: text, contractHash: contractHash(text) }).where(eq(engagements.id, e.id));
   const { maker } = await partiesOf(db, e);
   await notice(project.id, e.id, `📜 ${user.name} sent @${maker.handle} a contract to review and sign: "${e.title}".`);

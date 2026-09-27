@@ -1,12 +1,13 @@
 "use client";
 
-import { FolderKanban, Home, Plus, Sparkles, Users } from "lucide-react";
+import { FolderKanban, Home, Plus, Sparkles, Store, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/people", label: "People", icon: Users },
   { href: "/projects", label: "Projects", icon: FolderKanban },
+  { href: "/gigs", label: "Gigs", icon: Store },
 ];
 
 export function NavLinks() {
