@@ -3,6 +3,7 @@ import type { Db } from "@/db";
 import { conflictAlerts, fileTouches, githubActivity, githubDeliveries, githubInstallations, projectRepos, tasks, users } from "@/db/schema";
 import { fileName, findHotspots } from "@/lib/conflicts";
 import { announceStageDone } from "@/lib/pipeline-db";
+import { applyAgentPr } from "@/lib/agent-db";
 import { fireEvent } from "@/lib/automations-db";
 import type { AutomationEvent } from "@/lib/automations";
 import { channelByName, postMessage, type Notify } from "@/lib/messages";
@@ -126,6 +127,10 @@ async function applyEffect(db: Db, projectId: string, repoId: number, effect: Ef
           notify,
         );
       }
+      return;
+    }
+    case "agent_pr": {
+      await applyAgentPr(db, projectId, repoId, effect, notify);
       return;
     }
     case "task_upsert": {

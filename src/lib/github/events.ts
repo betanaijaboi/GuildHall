@@ -1,3 +1,4 @@
+import { linkedIssueNumbers } from "@/lib/agent";
 import type { MessageCard } from "@/db/schema";
 import { unmergeableTouches } from "@/lib/conflicts";
 
@@ -19,7 +20,9 @@ export type Effect =
       url: string;
       assigneeLogin: string | null;
     }
-  | { type: "file_touches"; branch: string; actorLogin: string; paths: string[] };
+  | { type: "file_touches"; branch: string; actorLogin: string; paths: string[] }
+  /** A PR linked to issues; tasks handed to the AI agent (C22) follow it. */
+  | { type: "agent_pr"; issueNumbers: number[]; state: "pr_open" | "merged" | "closed"; url: string; number: number; title: string };
 
 export type ActivityKind =
   | "push"
@@ -100,6 +103,10 @@ export function mapEvent(event: string, payload: Payload): Effect[] {
       ];
       if (action === "opened") effects.push({ type: "activity", kind: "pr_opened", actorLogin: actor, title: pr.title, url: pr.html_url });
       if (merged) effects.push({ type: "activity", kind: "pr_merged", actorLogin: actor, title: pr.title, url: pr.html_url });
+      const issueNumbers = linkedIssueNumbers({ body: pr.body, title: pr.title, headRef: pr.head?.ref });
+      if (issueNumbers.length && action !== "ready_for_review") {
+        effects.push({ type: "agent_pr", issueNumbers, state: merged ? "merged" : action === "closed" ? "closed" : "pr_open", url: pr.html_url, number: pr.number, title: pr.title });
+      }
       return effects;
     }
 

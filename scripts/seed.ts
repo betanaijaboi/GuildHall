@@ -231,6 +231,12 @@ for (const g of [
   if (g.addons.length) await db.insert(gigAddons).values(g.addons.map(([name, priceCents]) => ({ gigId: gig.id, name, priceCents })));
 }
 
+// C22: a task the lead handed to the AI coding agent, whose PR is open for review.
+await db.insert(tasks).values([
+  { projectId: tide.id, title: "Fix web export: storm shader fails to compile", status: "doing", agentStatus: "pr_open", agentPrUrl: "https://github.com/tidebound-studio/tidebound/pull/31", agentRequestedBy: ids.amara, ghRepoId: 5001, ghIssueNumber: 30, ghUrl: "https://github.com/tidebound-studio/tidebound/issues/30" },
+  { projectId: tide.id, title: "Add controller rebinding to the options menu", status: "todo", agentStatus: "requested", agentRequestedBy: ids.amara, ghRepoId: 5001, ghIssueNumber: 32, ghUrl: "https://github.com/tidebound-studio/tidebound/issues/32" },
+]);
+
 // C15: a publisher guest on Tidebound who only sees #art, and #builds shared with Ashen Crown.
 const [hana] = await db.insert(users).values({ handle: "hana", name: "Hana Kim", headline: "Publishing producer at Lantern Games", bio: "Publisher-side producer.", platforms: ["pc"] }).returning();
 await db.insert(memberships).values({ projectId: tide.id, userId: hana.id, role: "guest" });

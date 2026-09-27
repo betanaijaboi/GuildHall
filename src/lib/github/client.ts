@@ -196,3 +196,13 @@ export async function addBlockedBy(installationId: number, fullName: string, num
     issue_id: blockerId,
   });
 }
+
+export async function addLabels(installationId: number, fullName: string, issueNumber: number, labels: string[]): Promise<void> {
+  const octokit = await installationClient(installationId);
+  await octokit.rest.issues.addLabels({ ...splitName(fullName), issue_number: issueNumber, labels });
+}
+
+export async function commentOnIssue(installationId: number, fullName: string, issueNumber: number, body: string): Promise<void> {
+  const octokit = await installationClient(installationId);
+  await octokit.rest.issues.createComment({ ...splitName(fullName), issue_number: issueNumber, body });
+}

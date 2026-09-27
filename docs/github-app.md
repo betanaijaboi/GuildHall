@@ -55,3 +55,17 @@ GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVA
 3. Open **Project → Settings** and link a repo. From then on, activity appears in
    `#github` and `#builds`, issues become tasks, and **Open setup PR** proposes
    the engine's `.gitattributes`, `.gitignore`, CI and issue templates.
+
+## AI coding agent (C22)
+
+1. In project **Settings**, click **Enable AI agent** next to a linked repo. Guildhall opens a PR
+   adding `.github/workflows/guildhall-agent.yml`, which runs `anthropics/claude-code-action@v1`
+   on issues labelled `guildhall-agent`.
+2. Before merging, add the repository secret `ANTHROPIC_API_KEY` and install the Claude GitHub App
+   on the repo (or pass `github_token` to the action).
+3. Set `GITHUB_APP_SLUG` on the server. The label is applied by this app's bot, and the workflow
+   only accepts label events from bots listed in `allowed_bots`.
+4. Leads use **Assign to AI agent** on a task. PRs that say `Fixes #N` or come from a
+   `…/issue-N…` branch update the task card and post in #code. Merging stays a human decision.
+
+The GitHub App needs **Issues: write** for this (it already has it for pipelines and forum topics).

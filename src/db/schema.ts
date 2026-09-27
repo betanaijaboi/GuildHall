@@ -206,6 +206,10 @@ export const tasks = pgTable(
     /** Set when the task is a stage of an asset pipeline (C6). */
     pipelineItemId: uuid("pipeline_item_id").references(() => pipelineItems.id, { onDelete: "cascade" }),
     stageIndex: integer("stage_index"),
+    /** AI coding agent (C22): null unless a lead handed this task to the agent. */
+    agentStatus: text("agent_status").$type<"requested" | "pr_open" | "merged" | "closed">(),
+    agentPrUrl: text("agent_pr_url"),
+    agentRequestedBy: uuid("agent_requested_by").references(() => users.id, { onDelete: "set null" }),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
@@ -254,6 +258,8 @@ export const projectRepos = pgTable(
     repoId: bigint("repo_id", { mode: "number" }).notNull(),
     fullName: text("full_name").notNull(),
     defaultBranch: text("default_branch").notNull().default("main"),
+    /** PR that adds the AI agent workflow (C22). */
+    agentSetupUrl: text("agent_setup_url"),
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.projectId, t.repoId] }), index("project_repos_repo_idx").on(t.repoId)],

@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
-import { ChevronRight, ShieldCheck } from "lucide-react";
+import { Bot, ChevronRight, ShieldCheck } from "lucide-react";
+import { openAgentSetupPullRequest } from "@/app/actions/agent";
 import Link from "next/link";
 import { db } from "@/db";
 import { githubInstallations, projectRepos } from "@/db/schema";
@@ -95,6 +96,14 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
                 <input type="hidden" name="repoId" value={r.repoId} />
                 <button className="btn-secondary">Open setup PR</button>
               </form>
+              {r.agentSetupUrl ? (
+                <a href={r.agentSetupUrl} target="_blank" rel="noreferrer" className="btn-ghost text-sm"><Bot size={15} /> Agent setup PR</a>
+              ) : (
+                <form action={openAgentSetupPullRequest.bind(null, slug)}>
+                  <input type="hidden" name="repoId" value={r.repoId} />
+                  <button className="btn-secondary" title="Adds a workflow that runs Claude Code on tasks you assign to the agent"><Bot size={15} /> Enable AI agent</button>
+                </form>
+              )}
               <form action={unlinkRepo.bind(null, slug)}>
                 <input type="hidden" name="repoId" value={r.repoId} />
                 <button className="text-sm text-fg-muted hover:text-bad">Unlink</button>
