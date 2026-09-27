@@ -64,6 +64,13 @@
       "when": 1790516345379,
       "tag": "0008_credits",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790516518109,
+      "tag": "0009_rate_reports",
+      "breakpoints": true
     }
   ]
 }

@@ -576,3 +576,19 @@ export const creditConfirmations = pgTable(
   },
   (t) => [primaryKey({ columns: [t.creditId, t.confirmerId] })],
 );
+
+// --- Rate transparency (C20) --------------------------------------------------------------------
+
+/** Opt-in, anonymous hourly rate report (USD cents). Only aggregates of 10+ are ever shown. */
+export const rateReports = pgTable(
+  "rate_reports",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    skillId: text("skill_id").notNull(),
+    seniority: seniorityEnum("seniority").notNull(),
+    region: text("region").notNull(),
+    hourlyUsdCents: integer("hourly_usd_cents").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.skillId] }), index("rate_reports_skill_idx").on(t.skillId)],
+);

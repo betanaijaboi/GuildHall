@@ -1,5 +1,6 @@
 import { createGig } from "@/app/actions/gigs";
 import { CheckboxRow, SkillSelect } from "@/components/skill-picker";
+import { RateHint } from "@/components/rate-hint";
 import { requireUser } from "@/lib/auth";
 import { TIER_LABEL, TIERS } from "@/lib/gigs";
 import { ENGINES } from "@/lib/taxonomy";
@@ -23,6 +24,7 @@ export default async function NewGigPage() {
           <SkillSelect name="skillId" required />
           <select name="currency" className="input" defaultValue="usd">{["usd", "eur", "gbp", "cad", "aud"].map((c) => <option key={c} value={c}>{c.toUpperCase()}</option>)}</select>
         </div>
+        <RateHint selectName="skillId" />
         <textarea name="description" rows={4} placeholder="What you deliver, your process, what you need from the client…" className="input" />
         <input name="formats" maxLength={300} placeholder="Delivered as, e.g. WAV 48kHz + FMOD bank / FBX + PBR textures 2K" className="input" />
         <input name="coverUrl" type="url" placeholder="Cover image (https link, optional)" className="input" />

@@ -18,7 +18,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
     <div className="space-y-6">
       <div>
         <h1 className="h1">Find your <span className="text-gradient">party</span></h1>
-        <p className="mt-1 text-fg-muted">Every discipline a game needs, searchable by skill, engine and availability.</p>
+        <p className="mt-1 text-fg-muted">Every discipline a game needs, searchable by skill, engine and availability. <Link href="/rates" className="link">See market rates →</Link></p>
       </div>
       <div className="scroll-x -mx-4 flex gap-2 px-4">
         <Link href="/people" className={`chip shrink-0 px-3 py-1.5 text-sm ${!filters.discipline ? "border-accent text-fg" : ""}`}>All</Link>

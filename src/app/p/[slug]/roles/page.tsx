@@ -6,6 +6,7 @@ import { closeListing, createListing, decideApplication, leaveOrRemoveMember } f
 import { Avatar } from "@/components/avatar";
 import { SkillChip } from "@/components/discipline";
 import { SkillSelect } from "@/components/skill-picker";
+import { RateHint } from "@/components/rate-hint";
 import { loadProject, roleAtLeast } from "@/lib/access";
 import { requireUser } from "@/lib/auth";
 import { rankCandidates, teamGaps } from "@/lib/gap-analysis";
@@ -151,6 +152,7 @@ export default async function RolesPage({ params }: { params: Promise<{ slug: st
                 <input name="compensation" placeholder="e.g. 10% rev-share, $40/h" className="input" />
               </div>
               <textarea name="description" rows={3} placeholder="What they'll do, what you need to see" className="input sm:col-span-2" />
+              <div className="sm:col-span-2"><RateHint selectName="skillId" /></div>
               <button className="btn sm:col-span-2">Post role</button>
             </form>
           )}
