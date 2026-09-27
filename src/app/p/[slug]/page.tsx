@@ -67,6 +67,11 @@ export default async function ProjectPublicPage({
           </Link>
         ))}
 
+        <Link href={`/p/${slug}/roadmap`} className="card card-hover flex items-center gap-3 text-sm">
+          <span className="text-xl">🗺️</span>
+          <span className="flex-1"><span className="font-medium">Public roadmap</span><span className="block text-fg-muted">See what&apos;s coming and vote for what you want next.</span></span>
+        </Link>
+
         <section>
           <h2 className="h2 mb-3">Open roles</h2>
           {listings.length === 0 && <p className="text-sm text-fg-muted">Not recruiting right now.</p>}

@@ -918,3 +918,34 @@ export const feedbackKeys = pgTable("feedback_keys", {
   lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
   createdAt: createdAt(),
 });
+
+// --- Public roadmap + voting (C18) -------------------------------------------------------------------
+
+export const roadmapColumnEnum = pgEnum("roadmap_column", ["now", "next", "later", "shipped"]);
+
+export const roadmapItems = pgTable(
+  "roadmap_items",
+  {
+    id: id(),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    column: roadmapColumnEnum("column").notNull().default("later"),
+    /** Hidden items are visible to the team only (e.g. unannounced features). */
+    public: boolean("public").notNull().default(true),
+    taskId: uuid("task_id").references(() => tasks.id, { onDelete: "set null" }),
+    shippedAt: timestamp("shipped_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("roadmap_project_idx").on(t.projectId)],
+);
+
+export const roadmapVotes = pgTable(
+  "roadmap_votes",
+  {
+    itemId: uuid("item_id").notNull().references(() => roadmapItems.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.itemId, t.userId] })],
+);

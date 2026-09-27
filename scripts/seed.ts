@@ -16,7 +16,7 @@ import { eq } from "drizzle-orm";
 const url = process.env.DATABASE_URL ?? "postgres://guildhall:guildhall@localhost:5432/guildhall";
 const client = postgres(url, { max: 1, onnotice: () => {} });
 const db = drizzle(client, { schema });
-const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes, gddPages, gddLinks, channels, channelAccess, channelLinks, jams, jamSeekers, playtests, playtestTesters, feedbackReports } = schema;
+const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes, gddPages, gddLinks, channels, channelAccess, channelLinks, jams, jamSeekers, playtests, playtestTesters, feedbackReports, roadmapItems, roadmapVotes } = schema;
 
 await client`truncate users, projects, github_installations, github_deliveries restart identity cascade`;
 
@@ -280,6 +280,18 @@ for (const [h, fun, stuck, wish] of testers) {
   await db.insert(feedbackReports).values({ projectId: tide.id, playtestId: slicePlaytest.id, source: "form", kind: "feedback", reporterId: ids[h], reporterName: people.find((p) => p.handle === h)!.name, title: "Vertical slice playtest feedback", body: stuck ? `Got stuck: ${stuck}` : "Great vibe, the storm music is fantastic.", answers: { q1: fun, ...(stuck ? { q2: stuck } : {}), q3: wish }, platform: "Windows" });
 }
 await db.insert(feedbackReports).values({ projectId: tide.id, source: "sdk", kind: "bug", reporterName: "Sam (itch player)", title: "Boat clips through the dock at high speed", body: "Happened twice near the lighthouse pier when boosting.", build: "0.3.2", platform: "Windows 11" });
+
+// C18: Tidebound's public roadmap with a few player votes.
+const roadmap = await db.insert(roadmapItems).values([
+  { projectId: tide.id, title: "Storm weather system", description: "Dynamic squalls that change how the boat handles.", column: "now" },
+  { projectId: tide.id, title: "Steam Deck controls", description: "Full gamepad support and on-screen glyphs.", column: "next" },
+  { projectId: tide.id, title: "Name your boat", description: "Suggested by players in the playtest.", column: "next" },
+  { projectId: tide.id, title: "Co-op sailing", description: "A friend mans the sails while you steer.", column: "later" },
+  { projectId: tide.id, title: "Secret island", description: "Unannounced.", column: "later", public: false },
+  { projectId: tide.id, title: "Harbour district", description: "The first hub town.", column: "shipped", shippedAt: new Date(Date.now() - 5 * 86_400_000) },
+]).returning();
+const voteFor = (title: string, handles: string[]) => handles.map((h) => ({ itemId: roadmap.find((r) => r.title === title)!.id, userId: ids[h] }));
+await db.insert(roadmapVotes).values([...voteFor("Co-op sailing", ["priya", "jonas", "elena", "tomas"]), ...voteFor("Steam Deck controls", ["tomas", "elena"]), ...voteFor("Name your boat", ["jonas"])]);
 
 await client.end();
 console.log(`seeded ${people.length} people, 2 projects, ${hooks.length} webhook deliveries`);
