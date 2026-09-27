@@ -13,6 +13,7 @@ import { channelByName, postMessage } from "@/lib/messages";
 import { milestoneFor, nextStage } from "@/lib/milestones";
 import { announceStageDone, stageTasks } from "@/lib/pipeline-db";
 import { generateProjectCredits } from "@/lib/credits-db";
+import { fireEvent } from "@/lib/automations-db";
 import { isStageLocked } from "@/lib/pipelines";
 
 // --- Chat -----------------------------------------------------------------------------------
@@ -74,6 +75,9 @@ export async function setTaskStatus(slug: string, form: FormData): Promise<void>
   await db.update(tasks).set({ status, completedAt: status === "done" ? new Date() : null }).where(eq(tasks.id, task.id));
   if (task.pipelineItemId && task.stageIndex != null && status === "done" && task.status !== "done") {
     await announceStageDone(db, project.id, task.pipelineItemId, task.stageIndex);
+  }
+  if (status === "done" && task.status !== "done") {
+    await fireEvent(db, project.id, { type: "task_done", pipeline: Boolean(task.pipelineItemId), vars: { title: task.title, actor: user.name, url: `/p/${slug}/tasks` } });
   }
   revalidatePath(`/p/${slug}/tasks`);
   revalidatePath(`/p/${slug}/pipelines`);

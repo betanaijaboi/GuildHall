@@ -3,6 +3,8 @@ import type { Db } from "@/db";
 import { conflictAlerts, fileTouches, githubActivity, githubDeliveries, githubInstallations, projectRepos, tasks, users } from "@/db/schema";
 import { fileName, findHotspots } from "@/lib/conflicts";
 import { announceStageDone } from "@/lib/pipeline-db";
+import { fireEvent } from "@/lib/automations-db";
+import type { AutomationEvent } from "@/lib/automations";
 import { channelByName, postMessage, type Notify } from "@/lib/messages";
 import { publish, type ChannelEvent } from "@/lib/pubsub";
 import { mapEvent, repoIdOf, type Effect } from "./events";
@@ -42,6 +44,8 @@ export async function applyWebhook(db: Db, deliveryId: string, event: string, pa
     const effects = mapEvent(event, payload);
     for (const link of links) {
       for (const effect of effects) await applyEffect(txDb, link.projectId, repoId, effect, notify);
+      const auto = automationEvent(event, payload);
+      if (auto) await fireEvent(txDb, link.projectId, auto, notify);
     }
     return { duplicate: false, projects: links.length, effects: effects.length };
   });
@@ -166,4 +170,16 @@ async function applyEffect(db: Db, projectId: string, repoId: number, effect: Ef
       return;
     }
   }
+}
+
+/** GitHub events that automations can react to. */
+function automationEvent(event: string, payload: Payload): AutomationEvent | null {
+  if (event === "workflow_run" && payload.action === "completed" && ["failure", "timed_out"].includes(payload.workflow_run?.conclusion)) {
+    const run = payload.workflow_run;
+    return { type: "ci_failed", branch: run.head_branch ?? "", vars: { title: run.name, url: run.html_url, actor: run.actor?.login, branch: run.head_branch } };
+  }
+  if (event === "release" && payload.action === "published" && payload.release) {
+    return { type: "release_published", vars: { title: payload.release.name || payload.release.tag_name, url: payload.release.html_url, actor: payload.sender?.login } };
+  }
+  return null;
 }

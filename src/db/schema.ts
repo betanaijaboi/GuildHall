@@ -659,3 +659,24 @@ export const handOrder = pgTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.itemKey] })],
 );
+
+// --- Automations (C14) --------------------------------------------------------------------------
+
+export const automations = pgTable(
+  "automations",
+  {
+    id: id(),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** See src/lib/automations.ts for the trigger/action shapes. */
+    trigger: jsonb("trigger").notNull(),
+    action: jsonb("action").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    source: text("source").notNull().default("custom"),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    fireCount: integer("fire_count").notNull().default(0),
+    lastFiredAt: timestamp("last_fired_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("automations_project_idx").on(t.projectId)],
+);

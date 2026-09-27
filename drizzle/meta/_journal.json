@@ -99,6 +99,13 @@
       "when": 1790517212367,
       "tag": "0013_hand_order",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790517436514,
+      "tag": "0014_automations",
+      "breakpoints": true
     }
   ]
 }

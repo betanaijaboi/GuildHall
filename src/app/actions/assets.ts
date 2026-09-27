@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { assetComments, assetReviews, assets, assetVersions, pipelineItems } from "@/db/schema";
 import { completeCurrentStage } from "@/lib/pipeline-db";
 import { releaseForAsset } from "@/lib/engagements";
+import { fireEvent } from "@/lib/automations-db";
 import { paymentProvider, paymentsConfigured } from "@/lib/payments";
 import { loadProject, roleAtLeast } from "@/lib/access";
 import { postAssetActivity } from "@/lib/asset-feed";
@@ -96,6 +97,7 @@ export async function reviewAsset(slug: string, input: { assetId: string; versio
     }
     // ...and releases any funded payment milestone tied to this asset.
     if (paymentsConfigured()) await releaseForAsset(db, paymentProvider(), asset.id);
+    await fireEvent(db, project.id, { type: "asset_approved", vars: { title: asset.title, actor: user.name, url: `/p/${slug}/assets/${asset.id}` } });
   }
   revalidatePath(`/p/${slug}/assets`, "layout");
   revalidatePath(`/p/${slug}/pipelines`);

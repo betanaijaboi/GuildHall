@@ -8,6 +8,7 @@ import { postAssetActivity } from "@/lib/asset-feed";
 import { MAX_UPLOAD_BYTES, sniffFile } from "@/lib/assets";
 import { getCurrentUser } from "@/lib/auth";
 import { putFile } from "@/lib/storage";
+import { fireEvent } from "@/lib/automations-db";
 
 const fields = z.object({
   title: z.string().trim().min(1).max(120).optional(),
@@ -77,5 +78,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
     version.version === 1 ? `${user.name} submitted ${asset.title} for review` : `${user.name} uploaded v${version.version} of ${asset.title}`,
     { state: "in_review", version: version.version, lines: version.note ? [version.note] : undefined },
   );
+  await fireEvent(db, project.id, { type: "asset_submitted", vars: { title: `${asset.title} v${version.version}`, actor: user.name, url: `/p/${slug}/assets/${asset.id}` } });
   return NextResponse.json({ assetId: asset.id, version: version.version });
 }

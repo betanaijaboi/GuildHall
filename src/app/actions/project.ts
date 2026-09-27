@@ -11,6 +11,7 @@ import { requireUser } from "@/lib/auth";
 import { githubConfigured } from "@/lib/env";
 import { removeCollaborator } from "@/lib/github/client";
 import { GITHUB_PERMISSION, grantRepoAccess } from "@/lib/repo-access";
+import { fireEvent } from "@/lib/automations-db";
 import { channelByName, createDefaultChannels, postMessage } from "@/lib/messages";
 import { slugify } from "@/lib/slug";
 import { milestoneFor } from "@/lib/milestones";
@@ -201,6 +202,7 @@ export async function decideApplication(slug: string, form: FormData): Promise<v
     notes.push(...(await grantRepoAccess(db, project.id, row.applicant.githubLogin, GITHUB_PERMISSION[memberRole])));
   }
   if (general) await postMessage(db, { channelId: general.id, authorId: null, body: notes.join("\n") });
+  await fireEvent(db, project.id, { type: "member_joined", vars: { actor: row.applicant.name, title: skillLabel(row.listing.skillId) } });
   revalidatePath(`/p/${slug}/roles`);
 }
 

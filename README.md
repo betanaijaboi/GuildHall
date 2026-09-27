@@ -28,6 +28,7 @@ The product spec, research and roadmap live in the private design vault
 | **Forum channels** | A `#proposals` forum (added to existing projects on first visit). Topics show title, tags and a status (open, accepted, parked, done), with upvotes. Sort by top, active or new, and filter by status or tag. Leads set status and tags. Members turn a topic into a task, and leads can open a GitHub issue, each linked back to the discussion |
 | **Living GDD** | Default page tree (Overview, Mechanics, Characters, World, Levels, Art/Audio direction, Tech), one level of nesting, a safe markdown renderer (no raw HTML, https-only links, Figma/Miro-only embeds). Version-checked saves so concurrent edits never overwrite each other. Link tasks, pipelines and assets for live % complete. Pin a page to a channel header, and promote forum topics into pages |
 | **Your hand** | One cross-project queue of everything waiting on you: contracts to sign, milestones to release or fund, assets to review (not your own uploads), assigned tasks and pipeline stages (locked ones last), and @mentions from the last 14 days. Blocking work comes first, shown as a fanned card hand plus a drag-to-reorder list that persists |
+| **Automations** | When → then rules. Triggers: CI failure (branch filter), release published, task or pipeline stage done, asset submitted or approved, member joined, weekly schedule. Actions: post or ping in a channel with `{title}/{url}/{actor}/{branch}` templates, draft a devlog, post the digest. Five one-click templates, a step-by-step builder, and plain-English drafting (Claude via structured outputs when `ANTHROPIC_API_KEY` is set, otherwise a deterministic phrase parser), always confirmed by a lead. Weekly rules run from a secret-protected hourly cron. Rules can't trigger each other |
 | **Team gaps** | Compares the roster with the roles the current stage needs, and suggests people ranked by skill, engine and availability |
 
 **Not in the MVP yet** (see the build order in the vault's competitor-components.md): voice/video, two-way issue sync, Discord bridge, desktop and
@@ -36,7 +37,7 @@ invites.
 
 ## Stack
 
-Next.js 16 (App Router, server actions) · TypeScript · PostgreSQL + Drizzle ORM ·
+Next.js 16 (App Router, server actions) · TypeScript · PostgreSQL + Drizzle ORM · Claude API (optional, `claude-opus-5`, structured outputs + server-side refusal fallbacks) ·
 Tailwind CSS 4 · Octokit (GitHub App) · Vitest.
 
 Live chat uses an in-process event bus. Run a **single instance**, or swap

@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, BookOpen, FileSignature, Flag, ImageIcon, ListTodo, MessagesSquare, Newspaper, Settings, Users, Workflow } from "lucide-react";
+import { BarChart3, BookOpen, FileSignature, Flag, ImageIcon, ListTodo, MessagesSquare, Newspaper, Settings, Users, Workflow, Zap } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -15,6 +15,7 @@ const TABS = [
   { href: "contracts", match: "contracts", label: "Contracts", icon: FileSignature },
   { href: "updates", match: "updates", label: "Devlog", icon: Newspaper },
   { href: "digest", match: "digest", label: "Digest", icon: BarChart3 },
+  { href: "automations", match: "automations", label: "Automations", icon: Zap },
   { href: "settings", match: "settings", label: "Settings", icon: Settings },
 ];
 
