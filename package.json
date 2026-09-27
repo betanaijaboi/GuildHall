@@ -1,0 +1,40 @@
+{
+  "name": "guildhall",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Game-dev talent marketplace + team workspace, deeply integrated with GitHub.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/seed.ts"
+  },
+  "dependencies": {
+    "@octokit/app": "^16.1.4",
+    "@octokit/rest": "^22.0.1",
+    "@octokit/webhooks-methods": "^6.0.0",
+    "drizzle-orm": "^0.45.3",
+    "next": "^16.3.6",
+    "postgres": "^3.4.9",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.20.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "drizzle-kit": "^0.31.11",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "5.9",
+    "vitest": "^5.0.2"
+  },
+  "type": "module"
+}

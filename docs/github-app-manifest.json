@@ -1,0 +1,31 @@
+{
+  "name": "Guildhall (dev)",
+  "url": "http://localhost:3000",
+  "hook_attributes": { "url": "https://YOUR-TUNNEL.example/api/github/webhook", "active": true },
+  "redirect_url": "http://localhost:3000/api/auth/github/callback",
+  "callback_urls": ["http://localhost:3000/api/auth/github/callback"],
+  "setup_url": "http://localhost:3000/api/auth/github/callback",
+  "setup_on_update": true,
+  "request_oauth_on_install": true,
+  "public": false,
+  "default_permissions": {
+    "metadata": "read",
+    "contents": "write",
+    "issues": "write",
+    "pull_requests": "write",
+    "checks": "read",
+    "actions": "read",
+    "administration": "write",
+    "email_addresses": "read"
+  },
+  "default_events": [
+    "push",
+    "pull_request",
+    "pull_request_review",
+    "issues",
+    "issue_comment",
+    "workflow_run",
+    "release",
+    "repository"
+  ]
+}
