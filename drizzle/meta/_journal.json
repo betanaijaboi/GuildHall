@@ -50,6 +50,13 @@
       "when": 1790515949790,
       "tag": "0006_service_gigs",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790516187664,
+      "tag": "0007_endorsements",
+      "breakpoints": true
     }
   ]
 }

@@ -8,7 +8,7 @@ export type AvatarUser = { handle: string; name: string; avatarUrl?: string | nu
  * A user's avatar: their designed character (or a unique default from their handle), or their
  * GitHub photo if they chose that. `ring` adds the animated gradient ring used on profiles.
  */
-export function Avatar({ user, size = 32, ring = false }: { user: AvatarUser; size?: number; ring?: boolean }) {
+export function Avatar({ user, size = 32, ring = false, frame }: { user: AvatarUser; size?: number; ring?: boolean; frame?: string }) {
   const config = resolveAvatar(user.avatar, user.handle);
   const photo = config.mode === "photo" && user.avatarUrl;
   const inner = (
@@ -20,6 +20,14 @@ export function Avatar({ user, size = 32, ring = false }: { user: AvatarUser; si
       )}
     </span>
   );
+  if (frame && !ring) {
+    // Guild Rank frame: a solid ring in the rank's colour with a soft glow.
+    return (
+      <span className="inline-block shrink-0 rounded-full p-[2px]" style={{ background: frame, boxShadow: `0 0 ${Math.max(6, size / 6)}px ${frame}66` }}>
+        {inner}
+      </span>
+    );
+  }
   if (!ring) return <span className="inline-block shrink-0">{inner}</span>;
   return <span className="avatar-ring inline-block shrink-0 rounded-full p-[3px]">{inner}</span>;
 }

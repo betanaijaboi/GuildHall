@@ -5,9 +5,6 @@ export type Tier = (typeof TIERS)[number];
 
 export const TIER_LABEL: Record<Tier, string> = { basic: "Basic", standard: "Standard", premium: "Premium" };
 
-/** Active gig slots; Guild Rank (C1) raises this. */
-export const DEFAULT_GIG_SLOTS = 3;
-
 export type TierInput = { tier: Tier; name: string; priceCents: number; deliveryDays: number; revisions: number };
 
 /** Tiers must be offered in order and get strictly better: price and scope rise, delivery stays sane. */

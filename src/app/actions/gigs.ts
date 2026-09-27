@@ -10,15 +10,17 @@ import { requireUser } from "@/lib/auth";
 import { contractHash } from "@/lib/contracts";
 import { renderEngagementContract } from "@/lib/engagements";
 import { formatMoney, parseMoney } from "@/lib/fees";
-import { DEFAULT_GIG_SLOTS, orderTotal, TIER_LABEL, TIERS, validateTiers, type TierInput } from "@/lib/gigs";
+import { orderTotal, TIER_LABEL, TIERS, validateTiers, type TierInput } from "@/lib/gigs";
 import { channelByName, createDefaultChannels, postMessage } from "@/lib/messages";
+import { rankOf } from "@/lib/rank-db";
 import { slugify } from "@/lib/slug";
 import { ENGINES, isSkillId, skillLabel } from "@/lib/taxonomy";
 
 export async function createGig(form: FormData): Promise<void> {
   const user = await requireUser();
   const [{ n }] = await db.select({ n: count() }).from(gigs).where(and(eq(gigs.sellerId, user.id), eq(gigs.status, "active")));
-  if (n >= DEFAULT_GIG_SLOTS) throw new Error(`You can have ${DEFAULT_GIG_SLOTS} active gigs; pause one first (ranks unlock more)`);
+  const { rank } = await rankOf(db, user.id);
+  if (n >= rank.gigSlots) throw new Error(`${rank.label}s can have ${rank.gigSlots} active gigs; pause one first (higher ranks unlock more)`);
   const base = z
     .object({
       title: z.string().trim().min(5).max(100),
@@ -78,7 +80,8 @@ export async function setGigStatus(form: FormData): Promise<void> {
   const status = z.enum(["active", "paused"]).parse(form.get("status"));
   if (status === "active") {
     const [{ n }] = await db.select({ n: count() }).from(gigs).where(and(eq(gigs.sellerId, user.id), eq(gigs.status, "active")));
-    if (n >= DEFAULT_GIG_SLOTS) throw new Error(`You can have ${DEFAULT_GIG_SLOTS} active gigs`);
+    const { rank } = await rankOf(db, user.id);
+    if (n >= rank.gigSlots) throw new Error(`${rank.label}s can have ${rank.gigSlots} active gigs`);
   }
   await db.update(gigs).set({ status }).where(and(eq(gigs.id, id), eq(gigs.sellerId, user.id)));
   revalidatePath(`/gigs/${id}`);

@@ -1,6 +1,8 @@
 import { and, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import type { Db } from "@/db";
 import { profileSkills, users } from "@/db/schema";
+import { computeRank } from "./rank";
+import { loadRankInputs } from "./rank-db";
 
 export type PeopleFilters = { q?: string; skill?: string; discipline?: string; engine?: string; availability?: string; engagement?: string };
 
@@ -40,5 +42,10 @@ export async function searchPeople(db: Db, f: PeopleFilters, limit = 50) {
   const skills = people.length
     ? await db.select().from(profileSkills).where(inArray(profileSkills.userId, people.map((p) => p.id)))
     : [];
-  return people.map((p) => ({ ...p, skillIds: skills.filter((s) => s.userId === p.id).map((s) => s.skillId) }));
+  const ranks = await loadRankInputs(db, people.map((p) => p.id));
+  return people.map((p) => ({
+    ...p,
+    skillIds: skills.filter((s) => s.userId === p.id).map((s) => s.skillId),
+    rank: computeRank(ranks.get(p.id)!).rank,
+  }));
 }

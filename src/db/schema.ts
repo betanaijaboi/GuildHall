@@ -529,3 +529,17 @@ export const gigOrders = pgTable("gig_orders", {
   engagementId: uuid("engagement_id").notNull().references(() => engagements.id, { onDelete: "cascade" }),
   createdAt: createdAt(),
 });
+
+// --- Guild Rank (C1) ---------------------------------------------------------------------------
+
+/** A skill endorsement from someone who has shared a project with the person. */
+export const endorsements = pgTable(
+  "endorsements",
+  {
+    fromId: uuid("from_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    toId: uuid("to_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    skillId: text("skill_id").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.fromId, t.toId, t.skillId] }), index("endorsements_to_idx").on(t.toId)],
+);

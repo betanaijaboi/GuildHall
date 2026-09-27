@@ -2,7 +2,10 @@ import { and, count, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { githubActivity, memberships, portfolioItems, profileSkills, projects, users } from "@/db/schema";
+import { endorsements, githubActivity, memberships, portfolioItems, profileSkills, projects, users } from "@/db/schema";
+import { toggleEndorsement } from "@/app/actions/rank";
+import { RankBadge } from "@/components/rank-badge";
+import { rankOf, sharesProject } from "@/lib/rank-db";
 import { GitMerge, Palette, Pencil } from "lucide-react";
 import { Avatar } from "@/components/avatar";
 import { DISCIPLINE_STYLE, SkillChip } from "@/components/discipline";
@@ -37,6 +40,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
       : Promise.resolve([{ n: 0 }]),
   ]);
   const skillIds = new Set(skills.map((s) => s.skillId));
+  const [rank, endorsed, canEndorse] = await Promise.all([
+    rankOf(db, person.id),
+    db.select({ skillId: endorsements.skillId, fromId: endorsements.fromId, fromName: users.name }).from(endorsements).innerJoin(users, eq(users.id, endorsements.fromId)).where(eq(endorsements.toId, person.id)),
+    viewer && viewer.id !== person.id ? sharesProject(db, viewer.id, person.id) : Promise.resolve(false),
+  ]);
+  const endorsedBy = (skillId: string) => endorsed.filter((e) => e.skillId === skillId);
   const avatar = resolveAvatar(person.avatar, person.handle);
   const mainDiscipline = DISCIPLINES.find((d) => d.specialisations.some((s) => skillIds.has(s.id)));
   const mainStyle = mainDiscipline ? DISCIPLINE_STYLE[mainDiscipline.id] : null;
@@ -52,11 +61,13 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
           <div className="min-w-0 flex-1">
             <h1 className="h1">{person.name}</h1>
             <p className="text-fg-muted">@{person.handle}{person.headline ? ` · ${person.headline}` : ""}</p>
+            <div className="mt-2 flex flex-wrap gap-2"><RankBadge rank={rank.rank} />
             {mainDiscipline && mainStyle && (
-              <span className="chip-tint mt-2" style={{ "--c": mainStyle.color } as React.CSSProperties}>
+              <span className="chip-tint" style={{ "--c": mainStyle.color } as React.CSSProperties}>
                 <mainStyle.icon size={12} /> Class: {mainDiscipline.label}
               </span>
             )}
+            </div>
           </div>
           {viewer?.id === person.id && (
             <div className="flex gap-2">
@@ -80,7 +91,25 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
                 <div key={d.id}>
                   <div className="text-xs font-medium uppercase tracking-wide text-fg-muted">{d.label}</div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
-                    {d.specialisations.filter((s) => skillIds.has(s.id)).map((s) => <SkillChip key={s.id} skillId={s.id} />)}
+                    {d.specialisations.filter((s) => skillIds.has(s.id)).map((s) => {
+                      const by = endorsedBy(s.id);
+                      const mine = by.some((e) => e.fromId === viewer?.id);
+                      return (
+                        <span key={s.id} className="inline-flex items-center gap-1" title={by.length ? `Endorsed by ${by.map((e) => e.fromName).join(", ")}` : undefined}>
+                          <SkillChip skillId={s.id} />
+                          {by.length > 0 && <span className="text-xs font-semibold text-good">+{by.length}</span>}
+                          {canEndorse && (
+                            <form action={toggleEndorsement}>
+                              <input type="hidden" name="handle" value={person.handle} />
+                              <input type="hidden" name="skillId" value={s.id} />
+                              <button className={`rounded-full px-1.5 text-xs transition-colors ${mine ? "bg-good/20 text-good" : "text-fg-muted hover:bg-muted hover:text-fg"}`} title={mine ? "Remove your endorsement" : "Endorse this skill"}>
+                                {mine ? "✓" : "+"}
+                              </button>
+                            </form>
+                          )}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -127,6 +156,37 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
       </div>
 
       <aside className="space-y-3">
+        <div className="card space-y-3">
+          <div className="flex items-center gap-3">
+            <RankBadge rank={rank.rank} size="lg" />
+            <div>
+              <div className="text-xs uppercase tracking-wide text-fg-muted">Guild Rank</div>
+              <div className="font-display text-xl font-bold" style={{ color: rank.rank.color }}>{rank.rank.label}</div>
+              <div className="text-xs text-fg-muted">{rank.points} points{rank.avgRating ? ` · ★ ${rank.avgRating.toFixed(1)}` : ""}</div>
+            </div>
+          </div>
+          {rank.next && (
+            <div>
+              <div className="xp-bar"><span style={{ width: `${rank.progress}%` }} /></div>
+              <div className="mt-1 text-xs text-fg-muted">{rank.next.min - rank.points} points to {rank.next.label}</div>
+            </div>
+          )}
+          <details className="text-sm">
+            <summary className="cursor-pointer text-fg-muted">How this rank was earned</summary>
+            <table className="mt-2 w-full text-xs">
+              <tbody>
+                {rank.lines.map((l) => (
+                  <tr key={l.label} className="border-t border-border">
+                    <td className="py-1.5 pr-2">{l.label}<div className="text-[10px] text-fg-muted">{l.rule}</div></td>
+                    <td className="py-1.5 text-right text-fg-muted">{l.count}</td>
+                    <td className="py-1.5 pl-2 text-right font-semibold">{l.points > 0 ? `+${l.points}` : l.points}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-2 text-[11px] text-fg-muted">Only verified activity on Guildhall counts. Ranks can&apos;t be bought. {rank.rank.label}s can run {rank.rank.gigSlots} active gigs.</p>
+          </details>
+        </div>
         <div className="card space-y-2 text-sm">
           <Row label="Availability">{person.availability}</Row>
           {person.seniority && <Row label="Seniority">{person.seniority}</Row>}
