@@ -1,5 +1,5 @@
 import { desc, eq, sql } from "drizzle-orm";
-import { Box, Film, MessageSquare } from "lucide-react";
+import { Box, Film, MessageSquare, Radar } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/db";
 import { assetComments, assets, assetVersions, users } from "@/db/schema";
@@ -42,7 +42,7 @@ export default async function AssetsPage({ params, searchParams }: { params: Pro
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
       <section className="space-y-4">
-        <div className="scroll-x flex gap-2">
+        <div className="scroll-x flex items-center gap-2">
           {FILTERS.map((f) => {
             const count = f.id ? rows.filter((r) => r.asset.status === f.id).length : rows.length;
             const active = (status ?? "") === f.id;
@@ -52,6 +52,7 @@ export default async function AssetsPage({ params, searchParams }: { params: Pro
               </Link>
             );
           })}
+          <Link href={`/p/${slug}/assets/radar`} className="btn-secondary ml-auto shrink-0 py-1.5"><Radar size={15} /> Conflict radar</Link>
         </div>
         {list.length === 0 ? (
           <div className="card flex flex-col items-center gap-2 py-16 text-center text-fg-muted">

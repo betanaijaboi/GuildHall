@@ -93,6 +93,19 @@ describe("applyWebhook", () => {
     expect(await db.select().from(githubInstallations)).toHaveLength(0);
   });
 
+  it("warns #art once per week when two people push the same unmergeable file", async () => {
+    const push = (who: string, branch: string) => ({
+      ref: `refs/heads/${branch}`, repository, pusher: { name: who }, commits: [{ message: "edit", modified: ["Content/Maps/Harbour.umap"] }],
+    });
+    await applyWebhook(db, "c1", "push", push("ada", "main"));
+    expect((await channelMessages("art")).filter((m) => m.body.includes("Conflict risk"))).toHaveLength(0);
+    await applyWebhook(db, "c2", "push", push("mei", "storm"));
+    await applyWebhook(db, "c3", "push", push("ada", "main"));
+    const warnings = (await channelMessages("art")).filter((m) => m.body.includes("Conflict risk"));
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].body).toContain("different branches");
+  });
+
   it("ignores events for repos no project links", async () => {
     const result = await applyWebhook(db, "x", "push", { repository: { id: 1, full_name: "other/repo" }, commits: [{ message: "a" }] });
     expect(result.projects).toBe(0);

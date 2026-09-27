@@ -339,3 +339,30 @@ export const assetReviews = pgTable("asset_reviews", {
   note: text("note").notNull().default(""),
   createdAt: createdAt(),
 });
+
+// --- Conflict radar (C12) --------------------------------------------------------------------
+
+export const fileTouches = pgTable(
+  "file_touches",
+  {
+    id: id(),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    repoId: bigint("repo_id", { mode: "number" }).notNull(),
+    path: text("path").notNull(),
+    branch: text("branch").notNull(),
+    actorLogin: text("actor_login").notNull(),
+    at: createdAt(),
+  },
+  (t) => [index("file_touches_project_at_idx").on(t.projectId, t.at), index("file_touches_path_idx").on(t.projectId, t.path)],
+);
+
+/** Last time the radar warned about a path, so each hotspot is announced at most once a week. */
+export const conflictAlerts = pgTable(
+  "conflict_alerts",
+  {
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    path: text("path").notNull(),
+    lastWarnedAt: timestamp("last_warned_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.path] })],
+);

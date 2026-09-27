@@ -1,4 +1,4 @@
-import { CircleDot, GitMerge, GitPullRequest, ImageIcon, Package, ScrollText, Upload, XCircle, type LucideIcon } from "lucide-react";
+import { CircleDot, GitMerge, GitPullRequest, ImageIcon, Package, ScrollText, TriangleAlert, Upload, XCircle, type LucideIcon } from "lucide-react";
 import type { MessageCard } from "@/db/schema";
 
 const STATE_COLOR: Record<string, string> = {
@@ -11,10 +11,12 @@ const STATE_COLOR: Record<string, string> = {
   in_review: "#fbbf24",
   changes_requested: "#fb7185",
   approved: "#34d399",
+  conflict_risk: "#fbbf24",
 };
 
 function iconFor(card: MessageCard): LucideIcon {
   if (card.kind === "pull_request") return card.state === "merged" ? GitMerge : GitPullRequest;
+  if (card.state === "conflict_risk") return TriangleAlert;
   return { issue: CircleDot, push: Upload, release: Package, check: XCircle, digest: ScrollText, pull_request: GitPullRequest, asset: ImageIcon }[card.kind];
 }
 

@@ -129,3 +129,44 @@ export async function fetchUserInstallationIds(token: string): Promise<number[]>
   const installs = await octokit.paginate(octokit.rest.apps.listInstallationsForAuthenticatedUser, { per_page: 100 });
   return installs.map((i) => i.id);
 }
+
+// --- Git LFS locks (conflict radar) -------------------------------------------------------
+
+export type LfsLock = { id: string; path: string; lockedAt: string; owner: string };
+
+async function lfsRequest(installationId: number, fullName: string, pathAndQuery: string, init?: RequestInit) {
+  const octokit = await installationClient(installationId);
+  const { token } = (await octokit.auth({ type: "installation" })) as { token: string };
+  const res = await fetch(`https://github.com/${fullName}.git/info/lfs/locks${pathAndQuery}`, {
+    ...init,
+    headers: {
+      Accept: "application/vnd.git-lfs+json",
+      "Content-Type": "application/vnd.git-lfs+json",
+      Authorization: `Basic ${Buffer.from(`x-access-token:${token}`).toString("base64")}`,
+      ...init?.headers,
+    },
+  });
+  if (!res.ok) throw new Error(`LFS locks API returned ${res.status}`);
+  return res.json();
+}
+
+/** Current Git LFS locks in a repo (the LFS locking API, authenticated as the installation). */
+export async function listLfsLocks(installationId: number, fullName: string): Promise<LfsLock[]> {
+  const locks: LfsLock[] = [];
+  let cursor = "";
+  for (let page = 0; page < 10; page++) {
+    const data = (await lfsRequest(installationId, fullName, `?limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`)) as {
+      locks: { id: string; path: string; locked_at: string; owner?: { name?: string } }[];
+      next_cursor?: string;
+    };
+    locks.push(...data.locks.map((l) => ({ id: l.id, path: l.path, lockedAt: l.locked_at, owner: l.owner?.name ?? "unknown" })));
+    if (!data.next_cursor) break;
+    cursor = data.next_cursor;
+  }
+  return locks;
+}
+
+/** Force-release a lock (leads only; the owner is told in chat). */
+export async function forceUnlock(installationId: number, fullName: string, lockId: string): Promise<void> {
+  await lfsRequest(installationId, fullName, `/${encodeURIComponent(lockId)}/unlock`, { method: "POST", body: JSON.stringify({ force: true }) });
+}

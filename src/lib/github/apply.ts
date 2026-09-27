@@ -1,6 +1,7 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db";
-import { githubActivity, githubDeliveries, githubInstallations, projectRepos, tasks, users } from "@/db/schema";
+import { conflictAlerts, fileTouches, githubActivity, githubDeliveries, githubInstallations, projectRepos, tasks, users } from "@/db/schema";
+import { fileName, findHotspots } from "@/lib/conflicts";
 import { channelByName, postMessage, type Notify } from "@/lib/messages";
 import { publish, type ChannelEvent } from "@/lib/pubsub";
 import { mapEvent, repoIdOf, type Effect } from "./events";
@@ -89,6 +90,37 @@ async function applyEffect(db: Db, projectId: string, repoId: number, effect: Ef
         title: effect.title,
         url: effect.url,
       });
+      return;
+    }
+    case "file_touches": {
+      await db.insert(fileTouches).values(effect.paths.map((path) => ({ projectId, repoId, path, branch: effect.branch, actorLogin: effect.actorLogin })));
+      const since = new Date(Date.now() - 7 * 86_400_000);
+      const recent = await db
+        .select({ path: fileTouches.path, actorLogin: fileTouches.actorLogin, branch: fileTouches.branch, at: fileTouches.at })
+        .from(fileTouches)
+        .where(and(eq(fileTouches.projectId, projectId), gte(fileTouches.at, since), inArray(fileTouches.path, effect.paths)));
+      const hotspots = findHotspots(recent, new Date());
+      for (const h of hotspots) {
+        // Claim the alert for this path; skip if we already warned in the last week.
+        const claimed = await db
+          .insert(conflictAlerts)
+          .values({ projectId, path: h.path })
+          .onConflictDoUpdate({ target: [conflictAlerts.projectId, conflictAlerts.path], set: { lastWarnedAt: sql`now()` }, where: sql`${conflictAlerts.lastWarnedAt} < ${since.toISOString()}::timestamptz` })
+          .returning();
+        if (!claimed.length) continue;
+        const channel = await channelByName(db, projectId, "art");
+        if (!channel) continue;
+        await postMessage(
+          db,
+          {
+            channelId: channel.id,
+            authorId: null,
+            body: `⚠ Conflict risk: ${fileName(h.path)} was changed by ${h.actors.map((a) => `@${a}`).join(" and ")} this week${h.crossBranch ? ` on different branches (${h.branches.join(", ")})` : ""}. It can't be merged. Agree who owns it and lock it with git lfs lock.`,
+            card: { kind: "check", title: fileName(h.path), state: "conflict_risk", repo: h.path, lines: h.branches.map((b) => `branch: ${b}`) },
+          },
+          notify,
+        );
+      }
       return;
     }
     case "task_upsert": {

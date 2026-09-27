@@ -1,4 +1,5 @@
 import type { MessageCard } from "@/db/schema";
+import { unmergeableTouches } from "@/lib/conflicts";
 
 /**
  * Pure mapping from a GitHub webhook to the effects Guildhall applies to every project linked
@@ -17,7 +18,8 @@ export type Effect =
       state: "open" | "closed";
       url: string;
       assigneeLogin: string | null;
-    };
+    }
+  | { type: "file_touches"; branch: string; actorLogin: string; paths: string[] };
 
 export type ActivityKind =
   | "push"
@@ -66,6 +68,10 @@ export function mapEvent(event: string, payload: Payload): Effect[] {
           },
         },
         { type: "activity", kind: "push", actorLogin: pusher, title, url: payload.compare },
+        ...(() => {
+          const paths = unmergeableTouches(commits);
+          return paths.length ? [{ type: "file_touches" as const, branch, actorLogin: pusher, paths }] : [];
+        })(),
       ];
     }
 
