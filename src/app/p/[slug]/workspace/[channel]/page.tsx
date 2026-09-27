@@ -2,11 +2,11 @@ import { and, asc, count, desc, eq, inArray, isNull, max } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { channels, messages, messageVotes, projectRepos, users } from "@/db/schema";
+import { channels, gddPages, messages, messageVotes, projectRepos, users } from "@/db/schema";
 import { ForumBoard, TopicHeader, type TopicCard } from "@/components/forum";
 import { sortTopics, type TopicSort } from "@/lib/forum";
 import { sendMessage } from "@/app/actions/workspace";
-import { Hash, MessagesSquare, Rocket, X } from "lucide-react";
+import { BookOpen, Hash, MessagesSquare, Rocket, X } from "lucide-react";
 import { Avatar, BotAvatar } from "@/components/avatar";
 import { GithubIcon } from "@/components/icons";
 import { ChatComposer } from "@/components/chat-composer";
@@ -110,6 +110,9 @@ export default async function ChannelPage({
         .orderBy(asc(messages.createdAt))
     : [];
 
+  const [pinned] = channel.pinnedPageId
+    ? await db.select({ id: gddPages.id, title: gddPages.title, emoji: gddPages.emoji }).from(gddPages).where(eq(gddPages.id, channel.pinnedPageId)).limit(1)
+    : [];
   const send = sendMessage.bind(null, slug);
   const base = `/p/${slug}/workspace/${channel.name}`;
 
@@ -141,6 +144,9 @@ export default async function ChannelPage({
           <span className="font-display font-semibold">{channel.name}</span>
           {channel.kind === "github" && <span className="text-xs text-fg-muted">activity from linked repos</span>}
           {channel.kind === "forum" && <span className="text-xs text-fg-muted">proposals and ideas, voted by the party</span>}
+          {pinned && (
+            <Link href={`/p/${slug}/gdd/${pinned.id}`} className="chip ml-2 hover:border-accent"><BookOpen size={11} /> {pinned.emoji} {pinned.title}</Link>
+          )}
           <span className="ml-auto flex items-center gap-2 text-xs text-fg-muted"><span className="live-dot" /> Live</span>
         </div>
         {channel.kind === "forum" ? (

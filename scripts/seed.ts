@@ -10,11 +10,13 @@ import { applyWebhook } from "../src/lib/github/apply";
 import { createDefaultChannels, channelByName, postMessage } from "../src/lib/messages";
 import { milestoneFor } from "../src/lib/milestones";
 import { templateById } from "../src/lib/pipelines";
+import { ensureGdd } from "../src/lib/gdd-db";
+import { eq } from "drizzle-orm";
 
 const url = process.env.DATABASE_URL ?? "postgres://guildhall:guildhall@localhost:5432/guildhall";
 const client = postgres(url, { max: 1, onnotice: () => {} });
 const db = drizzle(client, { schema });
-const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes } = schema;
+const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes, gddPages, gddLinks, channels } = schema;
 
 await client`truncate users, projects, github_installations, github_deliveries restart identity cascade`;
 
@@ -157,6 +159,33 @@ for (const [name, templateId, done, owners] of [
     })),
   );
 }
+
+// Living GDD for Tidebound: default tree with a real overview, characters linked to the pipeline.
+await ensureGdd(db, tide.id, ids.amara);
+const pages = await db.select().from(gddPages).where(eq(gddPages.projectId, tide.id));
+const page = (t: string) => pages.find((p) => p.title === t)!;
+await db.update(gddPages).set({ body: `## Elevator pitch
+A narrative sailing roguelite: every voyage rewrites the island chain, and **the crew remembers** what you did last run.
+
+## Design pillars
+- **The sea is the level**: weather and tides reshape routes every run
+- **Crew memory over stats**: relationships, not numbers, carry between runs
+- **Finish the voyage**: runs last 25–40 minutes
+
+## Core loop
+1. Choose a heading and a crew
+2. Weather a storm event
+3. Dock, trade, and resolve a crew moment
+4. The crew's memory updates, and the islands shift
+
+| Platform | Target |
+|---|---|
+| PC (Steam) | 60 fps on Steam Deck |
+| Nintendo | Stretch goal |
+` }).where(eq(gddPages.id, page("Overview").id));
+const mara = (await db.select().from(pipelineItems).where(eq(pipelineItems.name, "Captain Mara")))[0];
+await db.insert(gddLinks).values({ pageId: page("Characters").id, targetType: "pipeline", targetId: mara.id });
+await db.update(channels).set({ pinnedPageId: page("Art direction").id }).where(eq(channels.id, art.id));
 
 // Project 2: Unreal, concept stage, recruiting.
 const [ash] = await db

@@ -1,11 +1,12 @@
 "use client";
 
-import { BarChart3, FileSignature, Flag, ImageIcon, ListTodo, MessagesSquare, Newspaper, Settings, Users, Workflow } from "lucide-react";
+import { BarChart3, BookOpen, FileSignature, Flag, ImageIcon, ListTodo, MessagesSquare, Newspaper, Settings, Users, Workflow } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
   { href: "workspace/general", match: "workspace", label: "Chat", icon: MessagesSquare },
+  { href: "gdd", match: "gdd", label: "GDD", icon: BookOpen },
   { href: "assets", match: "assets", label: "Assets", icon: ImageIcon },
   { href: "pipelines", match: "pipelines", label: "Pipelines", icon: Workflow },
   { href: "tasks", match: "tasks", label: "Tasks", icon: ListTodo },
@@ -20,7 +21,7 @@ const TABS = [
 export function ProjectTabs({ slug, isLead }: { slug: string; isLead: boolean }) {
   const path = usePathname();
   return (
-    <nav className="scroll-x -mx-4 flex gap-1 px-4 md:mx-0 md:px-0">
+    <nav className="scroll-x -mx-4 flex gap-1 px-4 md:mx-0 md:flex-wrap md:px-0">
       {TABS.filter((t) => t.match !== "settings" || isLead).map(({ href, match, label, icon: Icon }) => {
         const active = path.startsWith(`/p/${slug}/${match}`);
         return (

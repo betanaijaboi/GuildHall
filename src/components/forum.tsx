@@ -1,6 +1,7 @@
-import { ArrowBigUp, CircleDot, ExternalLink, ListChecks, MessageSquare, Plus } from "lucide-react";
+import { ArrowBigUp, BookOpen, CircleDot, ExternalLink, ListChecks, MessageSquare, Plus } from "lucide-react";
 import Link from "next/link";
 import { convertTopicToIssue, convertTopicToTask, createTopic, setTopicStatus, setTopicTags, toggleVote } from "@/app/actions/forum";
+import { promoteTopicToPage } from "@/app/actions/gdd";
 import { Avatar } from "./avatar";
 import { STATUS_COLOR, SUGGESTED_TAGS, TOPIC_STATUSES, type TopicSort, type TopicStatus } from "@/lib/forum";
 
@@ -134,6 +135,9 @@ export function TopicHeader({ slug, topic, canLead, canWork, hasRepo }: { slug: 
         )}
         {canWork && !topic.convertedTaskId && (
           <form action={convertTopicToTask.bind(null, slug, topic.id)}><button className="btn-secondary px-2 py-1 text-xs"><ListChecks size={13} /> Make task</button></form>
+        )}
+        {canWork && (
+          <form action={promoteTopicToPage.bind(null, slug, topic.id)}><button className="btn-secondary px-2 py-1 text-xs"><BookOpen size={13} /> Add to GDD</button></form>
         )}
         {canLead && hasRepo && !topic.convertedUrl && (
           <form action={convertTopicToIssue.bind(null, slug, topic.id)}><button className="btn-secondary px-2 py-1 text-xs"><ExternalLink size={13} /> Open GitHub issue</button></form>

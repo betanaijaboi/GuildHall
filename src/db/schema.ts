@@ -146,6 +146,8 @@ export const channels = pgTable(
     projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     kind: channelKindEnum("kind").notNull().default("chat"),
+    /** A GDD page pinned to the channel header, e.g. the art bible in #art (C7). */
+    pinnedPageId: uuid("pinned_page_id"),
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("channels_project_name_idx").on(t.projectId, t.name)],
@@ -610,4 +612,37 @@ export const messageVotes = pgTable(
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.messageId, t.userId] })],
+);
+
+// --- Living GDD (C7) -----------------------------------------------------------------------------
+
+export const gddPages = pgTable(
+  "gdd_pages",
+  {
+    id: id(),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    parentId: uuid("parent_id"),
+    title: text("title").notNull(),
+    emoji: text("emoji").notNull().default("📄"),
+    body: text("body").notNull().default(""),
+    position: integer("position").notNull().default(0),
+    /** Incremented on every save; editors must present the version they opened. */
+    version: integer("version").notNull().default(1),
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("gdd_pages_project_idx").on(t.projectId, t.parentId, t.position)],
+);
+
+export const gddLinkTypeEnum = pgEnum("gdd_link_type", ["task", "pipeline", "asset"]);
+
+export const gddLinks = pgTable(
+  "gdd_links",
+  {
+    pageId: uuid("page_id").notNull().references(() => gddPages.id, { onDelete: "cascade" }),
+    targetType: gddLinkTypeEnum("target_type").notNull(),
+    targetId: uuid("target_id").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.pageId, t.targetType, t.targetId] })],
 );
