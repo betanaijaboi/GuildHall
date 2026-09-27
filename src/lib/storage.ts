@@ -8,13 +8,13 @@ import { Readable } from "node:stream";
  * Local-disk object storage for uploads. The interface (put / stat / stream) is what an S3/R2
  * adapter would implement; swap it before running more than one server.
  */
-const ROOT = path.resolve(process.env.UPLOAD_DIR ?? ".data/uploads");
+const ROOT = path.resolve(/* turbopackIgnore: true */ process.env.UPLOAD_DIR ?? ".data/uploads");
 
 const KEY = /^[0-9a-f-]{36}\.[a-z0-9]{2,5}$/;
 
 function resolveKey(key: string): string {
   if (!KEY.test(key)) throw new Error("Invalid storage key");
-  return path.join(ROOT, key.slice(0, 2), key);
+  return path.join(/* turbopackIgnore: true */ ROOT, key.slice(0, 2), key);
 }
 
 export async function putFile(data: Uint8Array, ext: string): Promise<string> {
