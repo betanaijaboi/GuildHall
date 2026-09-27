@@ -2,6 +2,9 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { portfolioItems, profileSkills } from "@/db/schema";
 import { addPortfolioItem, deletePortfolioItem, updateProfile } from "@/app/actions/profile";
+import Link from "next/link";
+import { Palette } from "lucide-react";
+import { Avatar } from "@/components/avatar";
 import { CheckboxRow, SkillPicker } from "@/components/skill-picker";
 import { requireUser } from "@/lib/auth";
 import { ENGAGEMENTS, ENGINES, PLATFORMS, SENIORITIES } from "@/lib/taxonomy";
@@ -22,6 +25,14 @@ export default async function EditProfilePage({ searchParams }: { searchParams: 
         <h1 className="h1">{welcome ? "Welcome — set up your profile" : "Edit profile"}</h1>
         <p className="text-sm text-fg-muted">Your skills and engines decide which projects and searches you show up in.</p>
       </div>
+      <Link href="/settings/avatar" className="card card-hover flex items-center gap-4">
+        <Avatar user={user} size={64} />
+        <div className="flex-1">
+          <div className="font-display font-semibold">{welcome ? "First, design your avatar" : "Your avatar"}</div>
+          <div className="text-sm text-fg-muted">Pick a face, hair, gear and backdrop: it follows you across chat, teams and your profile.</div>
+        </div>
+        <span className="btn-secondary"><Palette size={16} /> Customize</span>
+      </Link>
       <form action={updateProfile} className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>

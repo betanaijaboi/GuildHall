@@ -1,36 +1,49 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Inter, Space_Grotesk } from "next/font/google";
+import { LogOut, Plus } from "lucide-react";
+import { GithubIcon } from "@/components/icons";
 import Link from "next/link";
-import { getCurrentUser } from "@/lib/auth";
 import { Avatar } from "@/components/avatar";
+import { Logo } from "@/components/logo";
+import { MobileTabBar, NavLinks } from "@/components/nav";
+import { getCurrentUser } from "@/lib/auth";
 import "./globals.css";
 
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const grotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-grotesk", weight: ["500", "600", "700"] });
+
 export const metadata: Metadata = {
-  title: { default: "Guildhall", template: "%s · Guildhall" },
+  title: { default: "Guildhall — find your party, build your game", template: "%s · Guildhall" },
   description: "Find game makers, build together, and ship — with GitHub in the loop.",
 };
+
+export const viewport: Viewport = { themeColor: "#0b0a14" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${grotesk.variable}`}>
       <body className="min-h-screen font-sans antialiased">
-        <header className="border-b border-border bg-surface">
-          <nav className="mx-auto flex max-w-6xl items-center gap-5 px-4 py-3 text-sm">
-            <Link href="/" className="text-base font-semibold tracking-tight">
-              ⚔︎ Guildhall
+        <header className="sticky top-0 z-40 border-b border-border bg-bg/70 backdrop-blur-xl">
+          <nav className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-2.5">
+            <Link href="/" aria-label="Guildhall home">
+              <Logo />
             </Link>
-            <Link href="/people" className="text-fg-muted hover:text-fg">People</Link>
-            <Link href="/projects" className="text-fg-muted hover:text-fg">Projects</Link>
-            <div className="ml-auto flex items-center gap-3">
+            <NavLinks />
+            <div className="ml-auto flex items-center gap-2">
               {user ? (
                 <>
-                  <Link href="/projects/new" className="btn">New project</Link>
-                  <Link href="/settings/github" className="text-fg-muted hover:text-fg">GitHub</Link>
-                  <Link href={`/people/${user.handle}`} className="flex items-center gap-2">
-                    <Avatar name={user.name} url={user.avatarUrl} size={28} />
+                  <Link href="/projects/new" className="btn hidden sm:inline-flex">
+                    <Plus size={16} /> New project
                   </Link>
-                  <form action="/api/auth/logout" method="post">
-                    <button className="text-fg-muted hover:text-fg">Sign out</button>
+                  <Link href="/settings/github" className="btn-ghost hidden sm:inline-flex" aria-label="GitHub settings">
+                    <GithubIcon size={18} />
+                  </Link>
+                  <Link href={`/people/${user.handle}`} className="rounded-full transition-transform hover:scale-105" aria-label="Your profile">
+                    <Avatar user={user} size={34} />
+                  </Link>
+                  <form action="/api/auth/logout" method="post" className="hidden sm:block">
+                    <button className="btn-ghost" aria-label="Sign out"><LogOut size={16} /></button>
                   </form>
                 </>
               ) : (
@@ -39,7 +52,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </div>
           </nav>
         </header>
-        <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+        <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 md:pb-12">{children}</main>
+        <MobileTabBar handle={user?.handle ?? null} />
       </body>
     </html>
   );

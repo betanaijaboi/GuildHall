@@ -2,6 +2,7 @@ import { and, desc, eq, exists, sql, type SQL } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/db";
 import { memberships, projects, roleListings } from "@/db/schema";
+import { ProjectCover, ProjectCrest } from "@/components/project-cover";
 import { SkillSelect } from "@/components/skill-picker";
 import { getCurrentUser } from "@/lib/auth";
 import { ENGINES, labelFor, STAGES } from "@/lib/taxonomy";
@@ -51,12 +52,15 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
       {mine.length > 0 && (
         <section>
           <h1 className="h1 mb-3">Your projects</h1>
-          <ul className="grid gap-3 sm:grid-cols-3">
+          <ul className="stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {mine.map(({ project, role }) => (
               <li key={project.id}>
-                <Link href={`/p/${project.slug}/workspace/general`} className="card block hover:border-accent">
-                  <div className="font-medium">{project.name}</div>
-                  <div className="text-sm text-fg-muted">{labelFor(STAGES, project.stage)} · {role}</div>
+                <Link href={`/p/${project.slug}/workspace/general`} className="card card-hover flex items-center gap-3">
+                  <ProjectCrest slug={project.slug} name={project.name} size={44} />
+                  <div className="min-w-0">
+                    <div className="truncate font-display font-semibold">{project.name}</div>
+                    <div className="text-sm text-fg-muted">{labelFor(STAGES, project.stage)} · {role}</div>
+                  </div>
                 </Link>
               </li>
             ))}
@@ -80,16 +84,22 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
             <button className="btn-secondary">Filter</button>
           </form>
         </div>
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <ul className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {browse.map(({ project, openRoles }) => (
-            <li key={project.id} className="card">
-              <Link href={`/p/${project.slug}`} className="font-medium link">{project.name}</Link>
-              <p className="mt-1 line-clamp-2 text-sm text-fg-muted">{project.pitch}</p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                <span className="chip">{labelFor(ENGINES, project.engine)}</span>
-                <span className="chip">{labelFor(STAGES, project.stage)}</span>
-                {openRoles > 0 && <span className="chip text-good">{openRoles} open role{openRoles === 1 ? "" : "s"}</span>}
-              </div>
+            <li key={project.id}>
+              <Link href={`/p/${project.slug}`} className="card card-hover group flex h-full flex-col overflow-hidden p-0">
+                <ProjectCover slug={project.slug} className="h-24" />
+                <div className="flex flex-1 flex-col gap-2 p-4">
+                  <div className="-mt-10 mb-1"><ProjectCrest slug={project.slug} name={project.name} size={48} /></div>
+                  <div className="font-display text-lg font-semibold group-hover:text-accent">{project.name}</div>
+                  <p className="line-clamp-2 text-sm text-fg-muted">{project.pitch}</p>
+                  <div className="mt-auto flex flex-wrap gap-1.5 pt-2">
+                    <span className="chip">{labelFor(ENGINES, project.engine)}</span>
+                    <span className="chip">{labelFor(STAGES, project.stage)}</span>
+                    {openRoles > 0 && <span className="chip-tint" style={{ "--c": "#34d399" } as React.CSSProperties}>{openRoles} open role{openRoles === 1 ? "" : "s"}</span>}
+                  </div>
+                </div>
+              </Link>
             </li>
           ))}
         </ul>

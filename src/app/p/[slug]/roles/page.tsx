@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { applications, memberships, profileSkills, roleListings, users } from "@/db/schema";
 import { closeListing, createListing, decideApplication, leaveOrRemoveMember } from "@/app/actions/project";
 import { Avatar } from "@/components/avatar";
+import { SkillChip } from "@/components/discipline";
 import { SkillSelect } from "@/components/skill-picker";
 import { loadProject, roleAtLeast } from "@/lib/access";
 import { requireUser } from "@/lib/auth";
@@ -71,12 +72,12 @@ export default async function RolesPage({ params }: { params: Promise<{ slug: st
     <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
       <div className="space-y-6">
         <section className="card space-y-3">
-          <h2 className="h2">Team gaps for {labelFor(STAGES, project.stage)}</h2>
+          <h2 className="h2">Party composition for {labelFor(STAGES, project.stage)}</h2>
           <p className="text-sm text-fg-muted">Specialisations a team usually needs at this stage, compared with your members&apos; roles and profile skills.</p>
           <div className="flex flex-wrap gap-1.5">
-            {gaps.covered.map((s) => <span key={s} className="chip text-good">✓ {skillLabel(s)}</span>)}
-            {gaps.recruiting.map((s) => <span key={s} className="chip text-warn">recruiting · {skillLabel(s)}</span>)}
-            {gaps.missing.map((s) => <span key={s} className="chip text-bad">missing · {skillLabel(s)}</span>)}
+            {gaps.covered.map((s) => <SkillChip key={s} skillId={s} prefix="✓ " />)}
+            {gaps.recruiting.map((s) => <span key={s} className="chip border-dashed text-warn">recruiting · {skillLabel(s)}</span>)}
+            {gaps.missing.map((s) => <span key={s} className="chip border-dashed border-bad/50 text-bad">missing · {skillLabel(s)}</span>)}
           </div>
           {suggestions.length > 0 && (
             <div>
@@ -84,8 +85,8 @@ export default async function RolesPage({ params }: { params: Promise<{ slug: st
               <ul className="grid gap-2 sm:grid-cols-2">
                 {suggestions.map((s) => (
                   <li key={s.user.id}>
-                    <Link href={`/people/${s.user.handle}`} className="flex items-center gap-2 rounded-md p-1 hover:bg-muted">
-                      <Avatar name={s.user.name} url={s.user.avatarUrl} size={28} />
+                    <Link href={`/people/${s.user.handle}`} className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-muted">
+                      <Avatar user={s.user} size={34} />
                       <span className="text-sm">
                         {s.user.name}
                         <span className="block text-xs text-fg-muted">{s.skillIds.map(skillLabel).join(", ")}</span>
@@ -104,7 +105,7 @@ export default async function RolesPage({ params }: { params: Promise<{ slug: st
             {pending.map(({ application, applicant, listing }) => (
               <div key={application.id} className="card space-y-2">
                 <div className="flex items-center gap-2">
-                  <Avatar name={applicant.name} url={applicant.avatarUrl} size={28} />
+                  <Avatar user={applicant} size={34} />
                   <Link href={`/people/${applicant.handle}`} className="font-medium link">{applicant.name}</Link>
                   <span className="text-sm text-fg-muted">for {listing.title}</span>
                 </div>
@@ -161,7 +162,7 @@ export default async function RolesPage({ params }: { params: Promise<{ slug: st
         <ul className="space-y-2">
           {team.map((m) => (
             <li key={m.user.id} className="flex items-center gap-2">
-              <Avatar name={m.user.name} url={m.user.avatarUrl} size={28} />
+              <Avatar user={m.user} size={34} />
               <span className="text-sm">
                 <Link href={`/people/${m.user.handle}`} className="hover:underline">{m.user.name}</Link>
                 <span className="block text-xs text-fg-muted">{m.role}{m.skillId ? ` · ${skillLabel(m.skillId)}` : ""}</span>

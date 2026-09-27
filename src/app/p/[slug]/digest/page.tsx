@@ -1,3 +1,4 @@
+import { GitCommitHorizontal, GitMerge, GitPullRequest, CircleCheck, ListChecks, Package, XCircle, Newspaper, UserPlus, Send, type LucideIcon } from "lucide-react";
 import { db } from "@/db";
 import { postDigestToGeneral } from "@/app/actions/workspace";
 import { loadProject, roleAtLeast } from "@/lib/access";
@@ -5,6 +6,11 @@ import { requireUser } from "@/lib/auth";
 import { loadDigest } from "@/lib/digest";
 
 export const metadata = { title: "Weekly digest" };
+
+const ICONS: Record<string, [LucideIcon, string]> = {
+  commits: [GitCommitHorizontal, "#22d3ee"], prsMerged: [GitMerge, "#a78bfa"], prsOpened: [GitPullRequest, "#34d399"], issuesClosed: [CircleCheck, "#60a5fa"],
+  tasksDone: [ListChecks, "#f472b6"], releases: [Package, "#fbbf24"], ciFailures: [XCircle, "#fb7185"], posts: [Newspaper, "#fb923c"], newMembers: [UserPlus, "#34d399"],
+};
 
 const LABELS: Record<string, string> = {
   commits: "Commits",
@@ -28,22 +34,28 @@ export default async function DigestPage({ params }: { params: Promise<{ slug: s
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center gap-3">
         <div>
-          <h1 className="h1">Last 7 days</h1>
+          <h1 className="h1">This week in <span className="text-gradient">{project.name}</span></h1>
           <p className="text-fg-muted">{digest.headline}</p>
         </div>
         {roleAtLeast(role, "member") && (
           <form action={postDigestToGeneral.bind(null, slug)} className="ml-auto">
-            <button className="btn-secondary">Post to #general</button>
+            <button className="btn-secondary"><Send size={15} /> Post to #general</button>
           </form>
         )}
       </div>
-      <dl className="grid grid-cols-3 gap-3 sm:grid-cols-5">
-        {Object.entries(digest.counts).map(([k, v]) => (
-          <div key={k} className="card p-3">
-            <dt className="text-xs text-fg-muted">{LABELS[k]}</dt>
-            <dd className={`text-2xl font-semibold ${k === "ciFailures" && v > 0 ? "text-bad" : ""}`}>{v}</dd>
-          </div>
-        ))}
+      <dl className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {Object.entries(digest.counts).map(([k, v]) => {
+          const [Icon, color] = ICONS[k];
+          return (
+            <div key={k} className="card card-hover p-4">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl" style={{ color, background: `color-mix(in oklab, ${color} 16%, transparent)` }}>
+                <Icon size={18} />
+              </span>
+              <dd className="mt-3 font-display text-3xl font-bold">{v}</dd>
+              <dt className="text-xs text-fg-muted">{LABELS[k]}</dt>
+            </div>
+          );
+        })}
       </dl>
       <section className="card">
         <h2 className="h2 mb-2">Highlights</h2>

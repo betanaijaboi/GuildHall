@@ -1,46 +1,56 @@
+import { CircleDot, GitMerge, GitPullRequest, Package, ScrollText, Upload, XCircle, type LucideIcon } from "lucide-react";
 import type { MessageCard } from "@/db/schema";
 
-const STATE_STYLE: Record<string, string> = {
-  open: "text-good",
-  merged: "text-accent",
-  closed: "text-bad",
-  draft: "text-fg-muted",
-  failure: "text-bad",
-  timed_out: "text-bad",
+const STATE_COLOR: Record<string, string> = {
+  open: "#34d399",
+  merged: "#a78bfa",
+  closed: "#fb7185",
+  draft: "#9a96b3",
+  failure: "#fb7185",
+  timed_out: "#fb7185",
 };
 
-const ICON: Record<MessageCard["kind"], string> = {
-  pull_request: "⇄",
-  issue: "◎",
-  push: "↑",
-  release: "◆",
-  check: "✕",
-  digest: "☰",
-};
+function iconFor(card: MessageCard): LucideIcon {
+  if (card.kind === "pull_request") return card.state === "merged" ? GitMerge : GitPullRequest;
+  return { issue: CircleDot, push: Upload, release: Package, check: XCircle, digest: ScrollText, pull_request: GitPullRequest }[card.kind];
+}
 
 export function MessageCardView({ card }: { card: MessageCard }) {
+  const Icon = iconFor(card);
+  const color = STATE_COLOR[card.state ?? ""] ?? (card.kind === "release" ? "#fbbf24" : "#8b5cf6");
   return (
-    <div className="mt-1.5 max-w-xl rounded-md border border-border border-l-4 border-l-accent bg-muted/50 p-3 text-sm">
-      <div className="flex items-center gap-2">
-        <span aria-hidden>{ICON[card.kind]}</span>
-        {card.url ? (
-          <a href={card.url} target="_blank" rel="noreferrer" className="font-medium link">
-            {card.title}
-            {card.number ? ` #${card.number}` : ""}
-          </a>
-        ) : (
-          <span className="font-medium">{card.title}</span>
-        )}
-        {card.state && <span className={`ml-auto text-xs font-medium uppercase ${STATE_STYLE[card.state] ?? "text-fg-muted"}`}>{card.state}</span>}
+    <div
+      className="mt-2 max-w-xl overflow-hidden rounded-xl border bg-surface-2 text-sm transition-colors"
+      style={{ borderColor: `color-mix(in oklab, ${color} 35%, var(--color-border))` }}
+    >
+      <div className="flex items-start gap-3 p-3">
+        <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ color, background: `color-mix(in oklab, ${color} 16%, transparent)` }}>
+          <Icon size={17} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            {card.url ? (
+              <a href={card.url} target="_blank" rel="noreferrer" className="truncate font-semibold hover:underline">
+                {card.title}
+                {card.number ? <span className="font-normal text-fg-muted"> #{card.number}</span> : null}
+              </a>
+            ) : (
+              <span className="truncate font-semibold">{card.title}</span>
+            )}
+            {card.state && (
+              <span className="ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ color, background: `color-mix(in oklab, ${color} 15%, transparent)` }}>
+                {card.state.replace("_", " ")}
+              </span>
+            )}
+          </div>
+          {card.repo && <div className="mt-0.5 text-xs text-fg-muted">{card.repo}{card.actor ? ` · ${card.actor}` : ""}</div>}
+          {card.lines && card.lines.length > 0 && (
+            <ul className="mt-2 space-y-1 border-l-2 border-border pl-3 text-xs text-fg-muted">
+              {card.lines.map((l, i) => <li key={i} className="truncate">{l}</li>)}
+            </ul>
+          )}
+        </div>
       </div>
-      {card.repo && <div className="mt-0.5 text-xs text-fg-muted">{card.repo}{card.actor ? ` · ${card.actor}` : ""}</div>}
-      {card.lines && card.lines.length > 0 && (
-        <ul className="mt-2 space-y-0.5 text-xs text-fg-muted">
-          {card.lines.map((l, i) => (
-            <li key={i} className="truncate">• {l}</li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }

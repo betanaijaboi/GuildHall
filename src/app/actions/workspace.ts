@@ -2,6 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
 import { channels, memberships, messages, milestones, posts, projects, tasks } from "@/db/schema";
@@ -129,6 +130,7 @@ export async function completeMilestone(slug: string, form: FormData): Promise<v
     });
   }
   revalidatePath(`/p/${slug}`, "layout");
+  redirect(`/p/${slug}/milestones?celebrate=1`);
 }
 
 // --- Posts & digest -------------------------------------------------------------------------

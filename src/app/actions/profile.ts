@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { portfolioItems, profileSkills, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import { avatarSchema } from "@/lib/avatar";
 import { ENGAGEMENTS, ENGINES, isSkillId, PLATFORMS, SENIORITIES } from "@/lib/taxonomy";
 
 const ids = (list: readonly { id: string }[]) => new Set(list.map((x) => x.id));
@@ -82,4 +83,12 @@ export async function deletePortfolioItem(form: FormData): Promise<void> {
   const id = z.string().uuid().parse(form.get("id"));
   await db.delete(portfolioItems).where(and(eq(portfolioItems.id, id), eq(portfolioItems.userId, user.id)));
   revalidatePath("/settings/profile");
+}
+
+export async function saveAvatar(config: unknown): Promise<{ ok: true }> {
+  const user = await requireUser();
+  const avatar = avatarSchema.parse(config);
+  await db.update(users).set({ avatar }).where(eq(users.id, user.id));
+  revalidatePath("/", "layout");
+  return { ok: true };
 }

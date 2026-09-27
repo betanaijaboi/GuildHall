@@ -43,6 +43,8 @@ export const users = pgTable("users", {
   handle: text("handle").notNull().unique(),
   name: text("name").notNull(),
   avatarUrl: text("avatar_url"),
+  /** Avatar builder config (see src/lib/avatar.ts); null means the handle's generated default. */
+  avatar: jsonb("avatar"),
   bio: text("bio").notNull().default(""),
   headline: text("headline").notNull().default(""),
   timezone: text("timezone"),

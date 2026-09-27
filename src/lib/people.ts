@@ -2,7 +2,7 @@ import { and, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import type { Db } from "@/db";
 import { profileSkills, users } from "@/db/schema";
 
-export type PeopleFilters = { q?: string; skill?: string; engine?: string; availability?: string; engagement?: string };
+export type PeopleFilters = { q?: string; skill?: string; discipline?: string; engine?: string; availability?: string; engagement?: string };
 
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 
@@ -21,6 +21,9 @@ export async function searchPeople(db: Db, f: PeopleFilters, limit = 50) {
   }
   if (f.skill) {
     where.push(sql`exists (select 1 from ${profileSkills} where ${profileSkills.userId} = ${users.id} and ${profileSkills.skillId} = ${f.skill})`);
+  }
+  if (f.discipline && /^[a-z]+$/.test(f.discipline)) {
+    where.push(sql`exists (select 1 from ${profileSkills} where ${profileSkills.userId} = ${users.id} and ${profileSkills.skillId} like ${`${f.discipline}.%`})`);
   }
   if (f.engine) where.push(sql`${users.engines} @> array[${f.engine}]::text[]`);
   if (f.engagement) where.push(sql`${users.engagements} @> array[${f.engagement}]::text[]`);

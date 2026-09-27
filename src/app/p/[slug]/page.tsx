@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { applications, memberships, milestones, posts, roleListings, users } from "@/db/schema";
 import { applyToListing } from "@/app/actions/project";
 import { Avatar } from "@/components/avatar";
+import { SkillChip } from "@/components/discipline";
 import { loadProject } from "@/lib/access";
 import { getCurrentUser } from "@/lib/auth";
 import { ENGAGEMENTS, labelFor, PLATFORMS, skillLabel } from "@/lib/taxonomy";
@@ -58,10 +59,10 @@ export default async function ProjectPublicPage({
           {listings.length === 0 && <p className="text-sm text-fg-muted">Not recruiting right now.</p>}
           <ul className="space-y-3">
             {listings.map((l) => (
-              <li key={l.id} className="card space-y-2">
+              <li key={l.id} className="card card-hover space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{l.title}</span>
-                  <span className="chip">{skillLabel(l.skillId)}</span>
+                  <SkillChip skillId={l.skillId} />
                   <span className="chip">{labelFor(ENGAGEMENTS, l.engagement)}</span>
                   {l.hoursPerWeek && <span className="chip">{l.hoursPerWeek} h/wk</span>}
                   {l.compensation && <span className="chip">{l.compensation}</span>}
@@ -106,9 +107,7 @@ export default async function ProjectPublicPage({
           <div className="card">
             <div className="text-sm text-fg-muted">Current milestone</div>
             <div className="font-medium">{milestone.title}</div>
-            <div className="mt-2 h-2 rounded-full bg-muted">
-              <div className="h-2 rounded-full bg-accent" style={{ width: `${milestone.checklist.length ? (done / milestone.checklist.length) * 100 : 0}%` }} />
-            </div>
+            <div className="xp-bar mt-2"><span style={{ width: `${milestone.checklist.length ? (done / milestone.checklist.length) * 100 : 0}%` }} /></div>
             <div className="mt-1 text-xs text-fg-muted">{done} of {milestone.checklist.length} done</div>
           </div>
         )}
@@ -118,7 +117,7 @@ export default async function ProjectPublicPage({
             {team.map((m) => (
               <li key={m.user.id}>
                 <Link href={`/people/${m.user.handle}`} className="flex items-center gap-2">
-                  <Avatar name={m.user.name} url={m.user.avatarUrl} size={28} />
+                  <Avatar user={m.user} size={34} />
                   <span className="text-sm">
                     {m.user.name}
                     <span className="block text-xs text-fg-muted">{m.skillId ? skillLabel(m.skillId) : m.role}</span>

@@ -92,7 +92,7 @@ await createDefaultChannels(db, tide.id);
 const slice = milestoneFor("vertical_slice");
 slice.checklist[0].done = true;
 await db.insert(milestones).values([
-  { projectId: tide.id, ...milestoneFor("prototype"), completedAt: new Date(Date.now() - 20 * 86_400_000) },
+  { projectId: tide.id, ...milestoneFor("prototype"), checklist: milestoneFor("prototype").checklist.map((c) => ({ ...c, done: true })), completedAt: new Date(Date.now() - 20 * 86_400_000) },
   { projectId: tide.id, ...slice },
 ]);
 const [envListing] = await db

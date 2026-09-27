@@ -1,5 +1,6 @@
 "use client";
 
+import { SendHorizontal } from "lucide-react";
 import { useRef } from "react";
 
 /** Message box: Enter sends, Shift+Enter adds a newline. Clears after sending. */
@@ -22,7 +23,7 @@ export function ChatComposer({
         await action(form);
         formRef.current?.reset();
       }}
-      className="flex gap-2"
+      className="flex items-end gap-2"
     >
       <input type="hidden" name="channelId" value={channelId} />
       {threadRootId && <input type="hidden" name="threadRootId" value={threadRootId} />}
@@ -32,7 +33,7 @@ export function ChatComposer({
         rows={1}
         maxLength={4000}
         placeholder={placeholder}
-        className="input min-h-10 resize-y"
+        className="input min-h-11 resize-none"
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -40,7 +41,7 @@ export function ChatComposer({
           }
         }}
       />
-      <button className="btn">Send</button>
+      <button className="btn h-11 w-11 shrink-0 p-0" aria-label="Send"><SendHorizontal size={18} /></button>
     </form>
   );
 }

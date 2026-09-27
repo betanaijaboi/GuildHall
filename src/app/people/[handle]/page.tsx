@@ -3,7 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { githubActivity, memberships, portfolioItems, profileSkills, projects, users } from "@/db/schema";
+import { GitMerge, Palette, Pencil } from "lucide-react";
 import { Avatar } from "@/components/avatar";
+import { DISCIPLINE_STYLE, SkillChip } from "@/components/discipline";
+import { GithubIcon } from "@/components/icons";
+import { resolveAvatar } from "@/lib/avatar";
 import { getCurrentUser } from "@/lib/auth";
 import { DISCIPLINES, ENGAGEMENTS, ENGINES, labelFor, PLATFORMS, skillLabel } from "@/lib/taxonomy";
 
@@ -33,18 +37,37 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
       : Promise.resolve([{ n: 0 }]),
   ]);
   const skillIds = new Set(skills.map((s) => s.skillId));
+  const avatar = resolveAvatar(person.avatar, person.handle);
+  const mainDiscipline = DISCIPLINES.find((d) => d.specialisations.some((s) => skillIds.has(s.id)));
+  const mainStyle = mainDiscipline ? DISCIPLINE_STYLE[mainDiscipline.id] : null;
 
   return (
+    <div className="space-y-6">
+      <header className="card overflow-hidden p-0">
+        <div className="relative h-28 sm:h-36" style={{ background: `linear-gradient(120deg, ${avatar.bg}, ${avatar.outfit})` }}>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(255,255,255,0.18),transparent_50%)]" />
+        </div>
+        <div className="flex flex-wrap items-end gap-5 px-5 pb-5">
+          <div className="-mt-16 animate-pop"><Avatar user={person} size={120} ring /></div>
+          <div className="min-w-0 flex-1">
+            <h1 className="h1">{person.name}</h1>
+            <p className="text-fg-muted">@{person.handle}{person.headline ? ` · ${person.headline}` : ""}</p>
+            {mainDiscipline && mainStyle && (
+              <span className="chip-tint mt-2" style={{ "--c": mainStyle.color } as React.CSSProperties}>
+                <mainStyle.icon size={12} /> Class: {mainDiscipline.label}
+              </span>
+            )}
+          </div>
+          {viewer?.id === person.id && (
+            <div className="flex gap-2">
+              <Link href="/settings/avatar" className="btn-secondary"><Palette size={16} /> Avatar</Link>
+              <Link href="/settings/profile" className="btn-secondary"><Pencil size={16} /> Edit profile</Link>
+            </div>
+          )}
+        </div>
+      </header>
     <div className="grid gap-6 md:grid-cols-[1fr_300px]">
       <div className="space-y-6">
-        <header className="flex items-start gap-4">
-          <Avatar name={person.name} url={person.avatarUrl} size={72} />
-          <div>
-            <h1 className="h1">{person.name}</h1>
-            <p className="text-fg-muted">{person.headline || `@${person.handle}`}</p>
-            {viewer?.id === person.id && <Link href="/settings/profile" className="mt-1 inline-block text-sm link">Edit profile</Link>}
-          </div>
-        </header>
         {person.bio && <p className="whitespace-pre-wrap">{person.bio}</p>}
 
         <section>
@@ -57,7 +80,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
                 <div key={d.id}>
                   <div className="text-xs font-medium uppercase tracking-wide text-fg-muted">{d.label}</div>
                   <div className="mt-1 flex flex-wrap gap-1.5">
-                    {d.specialisations.filter((s) => skillIds.has(s.id)).map((s) => <span key={s.id} className="chip">{s.label}</span>)}
+                    {d.specialisations.filter((s) => skillIds.has(s.id)).map((s) => <SkillChip key={s.id} skillId={s.id} />)}
                   </div>
                 </div>
               ))}
@@ -77,7 +100,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2">
               {portfolio.map((item) => (
-                <li key={item.id} className="card">
+                <li key={item.id} className="card card-hover">
                   <a href={item.url} target="_blank" rel="noreferrer nofollow" className="font-medium link">{item.title}</a>
                   {item.description && <p className="mt-1 text-sm text-fg-muted">{item.description}</p>}
                 </li>
@@ -113,19 +136,24 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
           {person.engagements.length > 0 && <Row label="Open to">{person.engagements.map((e) => labelFor(ENGAGEMENTS, e)).join(", ")}</Row>}
         </div>
         <div className="card text-sm">
-          <div className="font-medium">GitHub</div>
+          <div className="flex items-center gap-2 font-medium"><GithubIcon size={16} /> GitHub</div>
           {person.githubLogin ? (
             <>
               <a href={`https://github.com/${person.githubLogin}`} className="link" target="_blank" rel="noreferrer">@{person.githubLogin}</a>
-              <p className="mt-1 text-fg-muted">
-                <span className="font-medium text-fg">{merged[0]?.n ?? 0}</span> merged PRs on Guildhall projects (verified from GitHub webhooks)
-              </p>
+              <div className="mt-3 flex items-center gap-3 rounded-xl bg-muted/60 p-3">
+                <GitMerge className="text-accent" size={20} />
+                <div>
+                  <div className="font-display text-xl font-bold">{merged[0]?.n ?? 0}</div>
+                  <div className="text-xs text-fg-muted">merged PRs on Guildhall projects, verified by webhooks</div>
+                </div>
+              </div>
             </>
           ) : (
             <p className="text-fg-muted">Not linked</p>
           )}
         </div>
       </aside>
+    </div>
     </div>
   );
 }

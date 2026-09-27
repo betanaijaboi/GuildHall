@@ -8,9 +8,9 @@ import { requireUser } from "@/lib/auth";
 export const metadata = { title: "Tasks" };
 
 const COLUMNS = [
-  { id: "todo", label: "To do" },
-  { id: "doing", label: "In progress" },
-  { id: "done", label: "Done" },
+  { id: "todo", label: "To do", color: "#9a96b3" },
+  { id: "doing", label: "In progress", color: "#22d3ee" },
+  { id: "done", label: "Done", color: "#34d399" },
 ] as const;
 
 export default async function TasksPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -38,11 +38,15 @@ export default async function TasksPage({ params }: { params: Promise<{ slug: st
         {COLUMNS.map((col) => {
           const items = rows.filter((r) => r.task.status === col.id);
           return (
-            <section key={col.id} className="rounded-lg border border-border bg-muted/40 p-3">
-              <h2 className="mb-2 text-sm font-semibold">{col.label} <span className="text-fg-muted">{items.length}</span></h2>
-              <ul className="space-y-2">
+            <section key={col.id} className="rounded-2xl border border-border bg-surface/50 p-3" style={{ borderTop: `3px solid ${col.color}` }}>
+              <h2 className="mb-3 flex items-center gap-2 px-1 text-sm font-semibold">
+                <span className="h-2 w-2 rounded-full" style={{ background: col.color }} />
+                {col.label}
+                <span className="ml-auto rounded-full bg-muted px-2 text-xs text-fg-muted">{items.length}</span>
+              </h2>
+              <ul className="stagger space-y-2">
                 {items.map(({ task, assignee }) => (
-                  <li key={task.id} className="card p-3">
+                  <li key={task.id} className="card card-hover p-3">
                     <div className="text-sm font-medium">{task.title}</div>
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-fg-muted">
                       {assignee && <span>{assignee.name}</span>}
