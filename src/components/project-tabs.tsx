@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "workspace/general", match: "workspace", label: "Chat", icon: MessagesSquare },
+  { href: "workspace", match: "workspace", label: "Chat", icon: MessagesSquare },
   { href: "gdd", match: "gdd", label: "GDD", icon: BookOpen },
   { href: "assets", match: "assets", label: "Assets", icon: ImageIcon },
   { href: "pipelines", match: "pipelines", label: "Pipelines", icon: Workflow },
@@ -19,11 +19,14 @@ const TABS = [
   { href: "settings", match: "settings", label: "Settings", icon: Settings },
 ];
 
-export function ProjectTabs({ slug, isLead }: { slug: string; isLead: boolean }) {
+/** Guests (C15) only ever see the channels and assets shared with them. */
+const GUEST_TABS = new Set(["workspace", "assets"]);
+
+export function ProjectTabs({ slug, isLead, isGuest = false }: { slug: string; isLead: boolean; isGuest?: boolean }) {
   const path = usePathname();
   return (
     <nav className="scroll-x -mx-4 flex gap-1 px-4 md:mx-0 md:flex-wrap md:px-0">
-      {TABS.filter((t) => t.match !== "settings" || isLead).map(({ href, match, label, icon: Icon }) => {
+      {TABS.filter((t) => (t.match !== "settings" || isLead) && (!isGuest || GUEST_TABS.has(t.match))).map(({ href, match, label, icon: Icon }) => {
         const active = path.startsWith(`/p/${slug}/${match}`);
         return (
           <Link

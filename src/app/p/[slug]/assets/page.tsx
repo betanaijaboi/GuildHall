@@ -1,4 +1,4 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { Box, Film, MessageSquare, Radar } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/db";
@@ -8,6 +8,7 @@ import { Avatar } from "@/components/avatar";
 import { AssetStatusChip } from "@/components/asset-status";
 import { loadProject, roleAtLeast } from "@/lib/access";
 import { requireUser } from "@/lib/auth";
+import { sharedAssetIds } from "@/lib/channel-access";
 
 export const metadata = { title: "Assets" };
 
@@ -24,7 +25,9 @@ export default async function AssetsPage({ params, searchParams }: { params: Pro
   const user = await requireUser();
   const { project, role } = await loadProject(slug, user, "guest");
 
-  const rows = await db
+  // Guests only see assets that were shared with them (C15).
+  const shared = role === "guest" ? [...(await sharedAssetIds(db, user.id))] : null;
+  const rows = shared && !shared.length ? [] : await db
     .select({
       asset: assets,
       author: users,
@@ -35,7 +38,7 @@ export default async function AssetsPage({ params, searchParams }: { params: Pro
     })
     .from(assets)
     .leftJoin(users, eq(users.id, assets.createdBy))
-    .where(eq(assets.projectId, project.id))
+    .where(shared ? and(eq(assets.projectId, project.id), inArray(assets.id, shared)) : eq(assets.projectId, project.id))
     .orderBy(desc(assets.updatedAt));
   const list = status ? rows.filter((r) => r.asset.status === status) : rows;
 
@@ -52,7 +55,7 @@ export default async function AssetsPage({ params, searchParams }: { params: Pro
               </Link>
             );
           })}
-          <Link href={`/p/${slug}/assets/radar`} className="btn-secondary ml-auto shrink-0 py-1.5"><Radar size={15} /> Conflict radar</Link>
+          {role !== "guest" && <Link href={`/p/${slug}/assets/radar`} className="btn-secondary ml-auto shrink-0 py-1.5"><Radar size={15} /> Conflict radar</Link>}
         </div>
         {list.length === 0 ? (
           <div className="card flex flex-col items-center gap-2 py-16 text-center text-fg-muted">

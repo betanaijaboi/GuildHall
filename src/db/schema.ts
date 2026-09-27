@@ -680,3 +680,56 @@ export const automations = pgTable(
   },
   (t) => [index("automations_project_idx").on(t.projectId)],
 );
+
+// --- Guests & shared channels (C15) --------------------------------------------------------------
+
+/** Channels a guest may see (guests see nothing else in the workspace). */
+export const channelAccess = pgTable(
+  "channel_access",
+  {
+    channelId: uuid("channel_id").notNull().references(() => channels.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.channelId, t.userId] })],
+);
+
+/** Assets shared with a guest for review. */
+export const assetShares = pgTable(
+  "asset_shares",
+  {
+    assetId: uuid("asset_id").notNull().references(() => assets.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.assetId, t.userId] })],
+);
+
+export const guestInvites = pgTable("guest_invites", {
+  tokenHash: text("token_hash").primaryKey(),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  channelIds: text("channel_ids").array().notNull(),
+  assetIds: text("asset_ids").array().notNull().default(sql`'{}'::text[]`),
+  maxUses: integer("max_uses").notNull().default(5),
+  uses: integer("uses").notNull().default(0),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+});
+
+/** A channel owned by one project, also shown in another (cross-studio co-development). */
+export const channelLinks = pgTable(
+  "channel_links",
+  {
+    channelId: uuid("channel_id").notNull().references(() => channels.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.channelId, t.projectId] })],
+);
+
+export const channelShareCodes = pgTable("channel_share_codes", {
+  codeHash: text("code_hash").primaryKey(),
+  channelId: uuid("channel_id").notNull().references(() => channels.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+});

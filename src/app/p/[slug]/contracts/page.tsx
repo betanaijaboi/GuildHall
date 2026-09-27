@@ -16,7 +16,7 @@ const STATUS_COLOR: Record<string, string> = { draft: "#9a96b3", sent: "#fbbf24"
 export default async function ContractsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireUser();
-  const { project, role } = await loadProject(slug, user, "guest");
+  const { project, role } = await loadProject(slug, user, "contractor");
   const isLead = roleAtLeast(role, "lead");
   const list = await db
     .select({ e: engagements, maker: users })

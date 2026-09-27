@@ -10,7 +10,7 @@ export const metadata = { title: "Updates" };
 export default async function UpdatesPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireUser();
-  const { project, role } = await loadProject(slug, user, "guest");
+  const { project, role } = await loadProject(slug, user, "contractor");
   const list = await db.select({ post: posts, author: users }).from(posts).leftJoin(users, eq(users.id, posts.authorId)).where(eq(posts.projectId, project.id)).orderBy(desc(posts.createdAt));
 
   return (

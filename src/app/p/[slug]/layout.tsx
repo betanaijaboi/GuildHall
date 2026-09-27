@@ -32,7 +32,7 @@ export default async function ProjectLayout({ children, params }: { children: Re
         </div>
         {role && (
           <div className="border-t border-border px-5 py-2.5">
-            <ProjectTabs slug={slug} isLead={roleAtLeast(role, "lead")} />
+            <ProjectTabs slug={slug} isLead={roleAtLeast(role, "lead")} isGuest={role === "guest"} />
           </div>
         )}
       </header>

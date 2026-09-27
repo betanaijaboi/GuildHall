@@ -12,6 +12,7 @@ import { githubConfigured } from "@/lib/env";
 import { removeCollaborator } from "@/lib/github/client";
 import { GITHUB_PERMISSION, grantRepoAccess } from "@/lib/repo-access";
 import { fireEvent } from "@/lib/automations-db";
+import { revokeGuestGrants } from "@/lib/guests";
 import { channelByName, createDefaultChannels, postMessage } from "@/lib/messages";
 import { slugify } from "@/lib/slug";
 import { milestoneFor } from "@/lib/milestones";
@@ -213,7 +214,15 @@ export async function leaveOrRemoveMember(slug: string, form: FormData): Promise
   const userId = z.string().uuid().parse(form.get("userId"));
   if (userId !== user.id && !roleAtLeast(role, "lead")) throw new Error("Only leads can remove members");
   if (userId === project.ownerId) throw new Error("The owner can't be removed");
-  await db.delete(memberships).where(and(eq(memberships.projectId, project.id), eq(memberships.userId, userId)));
+  const [removed] = await db.delete(memberships).where(and(eq(memberships.projectId, project.id), eq(memberships.userId, userId))).returning();
+  if (!removed) return;
+  if (removed.role === "guest") {
+    // Guests never had repo access; just drop their channel and asset grants (C15).
+    await revokeGuestGrants(db, project.id, userId);
+    revalidatePath(`/p/${slug}`, "layout");
+    if (userId === user.id) redirect("/projects");
+    return;
+  }
 
   // Offboarding revokes repo access at the same time (github-integration.md §6).
   const [member] = await db.select({ login: users.githubLogin, name: users.name }).from(users).where(eq(users.id, userId)).limit(1);

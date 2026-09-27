@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
+import { safeNext } from "@/lib/next-path";
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/db";
 import { githubInstallations, users } from "@/db/schema";
@@ -20,6 +21,8 @@ export async function GET(req: NextRequest) {
   const jar = await cookies();
   const expectedState = jar.get("gh_oauth_state")?.value;
   jar.delete("gh_oauth_state");
+  const next = safeNext(jar.get("gh_next")?.value);
+  jar.delete("gh_next");
 
   const stateValid = Boolean(expectedState) && params.get("state") === expectedState;
   // Installation redirects don't carry our state, so they may only record installations for an
@@ -73,7 +76,7 @@ export async function GET(req: NextRequest) {
     await recordInstallation(Number(installationId), token, userId);
     return NextResponse.redirect(new URL("/settings/github", env.appUrl));
   }
-  return NextResponse.redirect(new URL(existing || current ? "/projects" : "/settings/profile?welcome=1", env.appUrl));
+  return NextResponse.redirect(new URL(next ?? (existing || current ? "/projects" : "/settings/profile?welcome=1"), env.appUrl));
 }
 
 /** Record an installation only if the GitHub user can actually access it. */

@@ -18,7 +18,7 @@ const COLUMNS = [
 export default async function TasksPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireUser();
-  const { project } = await loadProject(slug, user, "guest");
+  const { project } = await loadProject(slug, user, "contractor");
   const [rows, team] = await Promise.all([
     db.select({ task: tasks, assignee: users }).from(tasks).leftJoin(users, eq(users.id, tasks.assigneeId)).where(eq(tasks.projectId, project.id)).orderBy(asc(tasks.createdAt)),
     db.select({ id: users.id, name: users.name }).from(memberships).innerJoin(users, eq(users.id, memberships.userId)).where(eq(memberships.projectId, project.id)),

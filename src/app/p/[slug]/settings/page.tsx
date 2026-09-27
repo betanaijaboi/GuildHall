@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { ChevronRight, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/db";
 import { githubInstallations, projectRepos } from "@/db/schema";
@@ -39,6 +40,14 @@ export default async function ProjectSettingsPage({ params }: { params: Promise<
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
+      <Link href={`/p/${slug}/settings/sharing`} className="card card-hover flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/25 to-cyan-500/10 text-accent"><ShieldCheck size={20} /></span>
+        <span className="flex-1">
+          <span className="block font-medium">Guests &amp; shared channels</span>
+          <span className="block text-sm text-fg-muted">Invite a publisher or outsourcer to chosen channels and assets, or share a channel with a partner studio.</span>
+        </span>
+        <ChevronRight size={18} className="text-fg-muted" />
+      </Link>
       <form action={updateProject.bind(null, slug)} className="card space-y-4">
         <h2 className="h2">Project</h2>
         <div>

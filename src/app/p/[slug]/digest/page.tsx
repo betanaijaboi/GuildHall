@@ -27,7 +27,7 @@ const LABELS: Record<string, string> = {
 export default async function DigestPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireUser();
-  const { project, role } = await loadProject(slug, user, "guest");
+  const { project, role } = await loadProject(slug, user, "contractor");
   const digest = await loadDigest(db, project.id, new Date(Date.now() - 7 * 86_400_000));
 
   return (

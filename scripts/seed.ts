@@ -16,7 +16,7 @@ import { eq } from "drizzle-orm";
 const url = process.env.DATABASE_URL ?? "postgres://guildhall:guildhall@localhost:5432/guildhall";
 const client = postgres(url, { max: 1, onnotice: () => {} });
 const db = drizzle(client, { schema });
-const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes, gddPages, gddLinks, channels } = schema;
+const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes, gddPages, gddLinks, channels, channelAccess, channelLinks } = schema;
 
 await client`truncate users, projects, github_installations, github_deliveries restart identity cascade`;
 
@@ -230,6 +230,17 @@ for (const g of [
   await db.insert(gigTiers).values(g.tiers.map(([tier, name, priceCents, deliveryDays, revisions]) => ({ gigId: gig.id, tier, name, priceCents, deliveryDays, revisions })));
   if (g.addons.length) await db.insert(gigAddons).values(g.addons.map(([name, priceCents]) => ({ gigId: gig.id, name, priceCents })));
 }
+
+// C15: a publisher guest on Tidebound who only sees #art, and #builds shared with Ashen Crown.
+const [hana] = await db.insert(users).values({ handle: "hana", name: "Hana Kim", headline: "Publishing producer at Lantern Games", bio: "Publisher-side producer.", platforms: ["pc"] }).returning();
+await db.insert(memberships).values({ projectId: tide.id, userId: hana.id, role: "guest" });
+const tideArt = (await channelByName(db, tide.id, "art"))!;
+await db.insert(channelAccess).values({ channelId: tideArt.id, userId: hana.id });
+await postMessage(db, { channelId: tideArt.id, authorId: null, body: "👋 Hana Kim joined as a guest (Publisher: Lantern Games). They can see #art." });
+await postMessage(db, { channelId: tideArt.id, authorId: hana.id, body: "Loving the harbour mood. Could we get a key-art pass for the Steam capsule by the end of the month?" });
+const tideBuilds = (await channelByName(db, tide.id, "builds"))!;
+await db.insert(channelLinks).values({ channelId: tideBuilds.id, projectId: ash.id });
+await postMessage(db, { channelId: tideBuilds.id, authorId: null, body: "🔗 #builds is now shared with Ashen Crown (linked by Priya Nair). Both teams can read and post here." });
 
 await client.end();
 console.log(`seeded ${people.length} people, 2 projects, ${hooks.length} webhook deliveries`);

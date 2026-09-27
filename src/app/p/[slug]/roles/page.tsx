@@ -17,7 +17,7 @@ export const metadata = { title: "Team & roles" };
 export default async function RolesPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireUser();
-  const { project, role } = await loadProject(slug, user, "guest");
+  const { project, role } = await loadProject(slug, user, "contractor");
   const isLead = roleAtLeast(role, "lead");
 
   const [team, listings] = await Promise.all([

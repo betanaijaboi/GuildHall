@@ -9,6 +9,7 @@ import { AssetStatusChip } from "@/components/asset-status";
 import { AssetUploader } from "@/components/asset-uploader";
 import { Avatar } from "@/components/avatar";
 import { loadProject, roleAtLeast } from "@/lib/access";
+import { canSeeAsset } from "@/lib/channel-access";
 import { requireUser } from "@/lib/auth";
 
 export const metadata = { title: "Asset review" };
@@ -26,7 +27,7 @@ export default async function AssetPage({
   const { project, role } = await loadProject(slug, user, "guest");
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const [asset] = await db.select().from(assets).where(and(eq(assets.id, id), eq(assets.projectId, project.id))).limit(1);
-  if (!asset) notFound();
+  if (!asset || !(await canSeeAsset(db, asset.id, user.id, role))) notFound();
 
   const versions = await db
     .select({ version: assetVersions, uploader: users })
@@ -54,7 +55,7 @@ export default async function AssetPage({
       .orderBy(desc(assetReviews.createdAt)),
   ]);
 
-  const canComment = roleAtLeast(role, "contractor");
+  const canComment = roleAtLeast(role, "guest");
   const canReview = roleAtLeast(role, "member");
 
   return (
@@ -85,6 +86,7 @@ export default async function AssetPage({
           author: author ? { name: author.name, handle: author.handle } : null,
         }))}
         canComment={canComment}
+        canResolve={roleAtLeast(role, "contractor")}
         canReview={canReview}
       />
 

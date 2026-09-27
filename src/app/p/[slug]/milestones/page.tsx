@@ -14,7 +14,7 @@ export default async function MilestonesPage({ params, searchParams }: { params:
   const { slug } = await params;
   const { celebrate } = await searchParams;
   const user = await requireUser();
-  const { project, role } = await loadProject(slug, user, "guest");
+  const { project, role } = await loadProject(slug, user, "contractor");
   const list = await db.select().from(milestones).where(eq(milestones.projectId, project.id)).orderBy(desc(milestones.createdAt));
   const stageIndex = STAGES.findIndex((s) => s.id === project.stage);
 

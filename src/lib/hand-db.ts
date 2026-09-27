@@ -1,6 +1,6 @@
-import { and, desc, eq, gte, ilike, inArray, isNull, ne, or } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import type { Db } from "@/db";
-import { assets, assetVersions, channels, engagementMilestones, engagements, handOrder, memberships, messages, projects, tasks, users } from "@/db/schema";
+import { assets, assetVersions, channelAccess, channels, engagementMilestones, engagements, handOrder, memberships, messages, projects, tasks, users } from "@/db/schema";
 import { formatMoney } from "./fees";
 import { mentions, orderHand, type HandItem } from "./hand";
 import { isStageLocked } from "./pipelines";
@@ -17,6 +17,10 @@ export async function loadHand(db: Db, user: { id: string; handle: string }): Pr
   const ref = (id: string) => ({ slug: byId.get(id)!.slug, name: byId.get(id)!.name });
   const reviewerProjects = mine.filter((m) => ["member", "lead", "owner"].includes(m.role)).map((m) => m.project.id);
   const since = new Date(Date.now() - 14 * 86_400_000);
+  // Guests (C15) only hear about mentions in the channels they were granted.
+  const teamProjects = mine.filter((m) => m.role !== "guest").map((m) => m.project.id);
+  const granted = (await db.select({ id: channelAccess.channelId }).from(channelAccess).where(eq(channelAccess.userId, user.id))).map((r) => r.id);
+  const inScope = or(...(teamProjects.length ? [inArray(channels.projectId, teamProjects)] : []), ...(granted.length ? [inArray(channels.id, granted)] : []), sql`false`);
 
   const [myTasks, reviewable, contracts, recent] = await Promise.all([
     db.select().from(tasks).where(and(inArray(tasks.projectId, projectIds), eq(tasks.assigneeId, user.id), ne(tasks.status, "done"))),
@@ -38,7 +42,7 @@ export async function loadHand(db: Db, user: { id: string; handle: string }): Pr
       .from(messages)
       .innerJoin(channels, eq(channels.id, messages.channelId))
       .leftJoin(users, eq(users.id, messages.authorId))
-      .where(and(inArray(channels.projectId, projectIds), gte(messages.createdAt, since), ilike(messages.body, `%@${user.handle}%`), or(isNull(messages.authorId), ne(messages.authorId, user.id))))
+      .where(and(inScope, gte(messages.createdAt, since), ilike(messages.body, `%@${user.handle}%`), or(isNull(messages.authorId), ne(messages.authorId, user.id))))
       .orderBy(desc(messages.createdAt))
       .limit(30),
   ]);

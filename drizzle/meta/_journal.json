@@ -106,6 +106,13 @@
       "when": 1790517436514,
       "tag": "0014_automations",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1790517749972,
+      "tag": "0015_guests_shared_channels",
+      "breakpoints": true
     }
   ]
 }

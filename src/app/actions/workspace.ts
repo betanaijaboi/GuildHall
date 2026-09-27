@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { channels, memberships, messages, milestones, posts, projects, tasks } from "@/db/schema";
 import { loadProject } from "@/lib/access";
+import { canAccessChannel, channelInWorkspace } from "@/lib/channel-access";
 import { requireUser } from "@/lib/auth";
 import { loadDigest } from "@/lib/digest";
 import { channelByName, postMessage } from "@/lib/messages";
@@ -25,12 +26,9 @@ export async function sendMessage(slug: string, form: FormData): Promise<void> {
   const body = z.string().trim().min(1).max(4000).parse(form.get("body"));
   const threadRootId = z.string().uuid().optional().parse(form.get("threadRootId") || undefined);
 
-  const [channel] = await db
-    .select()
-    .from(channels)
-    .where(and(eq(channels.id, channelId), eq(channels.projectId, project.id)))
-    .limit(1);
-  if (!channel) throw new Error("Channel not found");
+  const [channel] = await db.select().from(channels).where(eq(channels.id, channelId)).limit(1);
+  // Own channels, or a partner's channel linked into this project; guests need a grant (C15).
+  if (!channel || !(await channelInWorkspace(db, project.id, channel)) || !(await canAccessChannel(db, channel.id, user.id))) throw new Error("Channel not found");
   if (threadRootId) {
     const [root] = await db
       .select({ id: messages.id })

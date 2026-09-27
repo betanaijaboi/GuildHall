@@ -14,7 +14,7 @@ export const metadata = { title: "Automations" };
 export default async function AutomationsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireUser();
-  const { project, role } = await loadProject(slug, user, "guest");
+  const { project, role } = await loadProject(slug, user, "contractor");
   const isLead = roleAtLeast(role, "lead");
   const [rules, chans] = await Promise.all([
     db.select().from(automations).where(eq(automations.projectId, project.id)).orderBy(desc(automations.createdAt)),

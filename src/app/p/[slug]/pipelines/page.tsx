@@ -22,7 +22,7 @@ const STATE_STYLE: Record<StageState, string> = {
 export default async function PipelinesPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireUser();
-  const { project, role } = await loadProject(slug, user, "guest");
+  const { project, role } = await loadProject(slug, user, "contractor");
   const [items, stageRows, team, projectAssets, [repo]] = await Promise.all([
     db.select({ item: pipelineItems, asset: assets }).from(pipelineItems).leftJoin(assets, eq(assets.id, pipelineItems.assetId)).where(eq(pipelineItems.projectId, project.id)).orderBy(desc(pipelineItems.createdAt)),
     db

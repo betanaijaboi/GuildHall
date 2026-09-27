@@ -49,6 +49,6 @@ export async function rankOf(db: Db, userId: string) {
 export async function sharesProject(db: Db, a: string, b: string): Promise<boolean> {
   const rows = await db.execute(sql`
     select 1 from ${memberships} m1 join ${memberships} m2 on m1.project_id = m2.project_id
-    where m1.user_id = ${a} and m2.user_id = ${b} limit 1`);
+    where m1.user_id = ${a} and m2.user_id = ${b} and m1.role <> 'guest' and m2.role <> 'guest' limit 1`);
   return rows.length > 0;
 }

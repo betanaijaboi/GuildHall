@@ -27,6 +27,8 @@ type Props = {
   version: { id: string; version: number; isLatest: boolean; uploadedByMe: boolean };
   comments: ReviewComment[];
   canComment: boolean;
+  /** Guests can pin notes but not resolve the team's comments. */
+  canResolve?: boolean;
   canReview: boolean;
 };
 
@@ -34,7 +36,7 @@ type ModelViewerElement = HTMLElement & {
   positionAndNormalFromPoint(x: number, y: number): { position: { toString(): string }; normal: { toString(): string } } | null;
 };
 
-export function AssetReview({ slug, asset, version, comments, canComment, canReview }: Props) {
+export function AssetReview({ slug, asset, version, comments, canComment, canResolve = canComment, canReview }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [draftPin, setDraftPin] = useState<Pin | null>(null);
@@ -306,7 +308,7 @@ export function AssetReview({ slug, asset, version, comments, canComment, canRev
                     <span className={`${pinBase} h-5 w-5 text-[10px] ${c.resolved ? "bg-muted" : "bg-gradient-to-br from-violet-500 to-cyan-500 text-white"}`}>{c.n}</span>
                     <span className="font-medium text-fg">{c.author?.name ?? "Someone"}</span>
                     {c.timeSec != null && <span className="font-mono">{formatTimecode(c.timeSec)}</span>}
-                    {canComment && (
+                    {canResolve && (
                       <button
                         type="button"
                         className="btn-ghost ml-auto px-1.5 py-0.5 text-xs"

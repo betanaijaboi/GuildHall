@@ -1,4 +1,4 @@
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, ne, sql } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
@@ -34,7 +34,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
       .select({ project: projects, role: memberships.role, skillId: memberships.skillId })
       .from(memberships)
       .innerJoin(projects, eq(projects.id, memberships.projectId))
-      .where(and(eq(memberships.userId, person.id), eq(projects.visibility, "public"))),
+      .where(and(eq(memberships.userId, person.id), eq(projects.visibility, "public"), ne(memberships.role, "guest"))),
     person.githubLogin
       ? db
           .select({ n: count() })

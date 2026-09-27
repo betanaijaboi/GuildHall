@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/db";
 import { assets, assetVersions } from "@/db/schema";
 import { getRole } from "@/lib/access";
+import { canSeeAsset } from "@/lib/channel-access";
 import { getCurrentUser } from "@/lib/auth";
 import { readFileStream } from "@/lib/storage";
 
@@ -13,12 +14,12 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ versionId: 
   const user = await getCurrentUser();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
   const [row] = await db
-    .select({ version: assetVersions, projectId: assets.projectId })
+    .select({ version: assetVersions, projectId: assets.projectId, assetId: assets.id })
     .from(assetVersions)
     .innerJoin(assets, eq(assets.id, assetVersions.assetId))
     .where(eq(assetVersions.id, versionId))
     .limit(1);
-  if (!row || !(await getRole(row.projectId, user.id))) return new NextResponse("Not found", { status: 404 });
+  if (!row || !(await canSeeAsset(db, row.assetId, user.id, await getRole(row.projectId, user.id)))) return new NextResponse("Not found", { status: 404 });
 
   const { size, mime, fileKey } = row.version;
   const headers: Record<string, string> = {

@@ -10,15 +10,17 @@ import { releaseForAsset } from "@/lib/engagements";
 import { fireEvent } from "@/lib/automations-db";
 import { paymentProvider, paymentsConfigured } from "@/lib/payments";
 import { loadProject, roleAtLeast } from "@/lib/access";
+import { canSeeAsset } from "@/lib/channel-access";
 import { postAssetActivity } from "@/lib/asset-feed";
 import { assetStatus, formatTimecode, normalisePin } from "@/lib/assets";
 import { requireUser } from "@/lib/auth";
 
-async function loadAsset(slug: string, assetId: string) {
+/** Guests (C15) may load only assets shared with them, and only to comment. */
+async function loadAsset(slug: string, assetId: string, min: "guest" | "contractor" = "contractor") {
   const user = await requireUser();
-  const { project, role } = await loadProject(slug, user, "contractor");
+  const { project, role } = await loadProject(slug, user, min);
   const [asset] = await db.select().from(assets).where(and(eq(assets.id, assetId), eq(assets.projectId, project.id))).limit(1);
-  if (!asset) throw new Error("Asset not found");
+  if (!asset || !(await canSeeAsset(db, asset.id, user.id, role))) throw new Error("Asset not found");
   return { user, project, role, asset };
 }
 
@@ -35,7 +37,7 @@ const commentSchema = z.object({
 
 export async function addAssetComment(slug: string, input: z.input<typeof commentSchema>) {
   const data = commentSchema.parse(input);
-  const { user, asset } = await loadAsset(slug, data.assetId);
+  const { user, asset } = await loadAsset(slug, data.assetId, "guest");
   const [version] = await db
     .select({ id: assetVersions.id })
     .from(assetVersions)

@@ -32,7 +32,7 @@ export default async function ProjectPublicPage({
       .select({ post: posts, author: users })
       .from(posts)
       .leftJoin(users, eq(users.id, posts.authorId))
-      .where(role ? eq(posts.projectId, project.id) : and(eq(posts.projectId, project.id), eq(posts.visibility, "public")))
+      .where(role && role !== "guest" ? eq(posts.projectId, project.id) : and(eq(posts.projectId, project.id), eq(posts.visibility, "public")))
       .orderBy(desc(posts.createdAt))
       .limit(10),
     db.select().from(milestones).where(eq(milestones.projectId, project.id)).orderBy(desc(milestones.createdAt)).limit(1),
@@ -127,7 +127,7 @@ export default async function ProjectPublicPage({
             ))}
           </ul>
         </div>
-        {role && <Link href={`/p/${slug}/workspace/general`} className="btn w-full">Open workspace</Link>}
+        {role && <Link href={`/p/${slug}/workspace`} className="btn w-full">Open workspace</Link>}
       </aside>
     </div>
   );

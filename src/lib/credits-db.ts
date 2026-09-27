@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import type { Db } from "@/db";
 import { credits, memberships, projectRepos, projects, users } from "@/db/schema";
 import { creditsMarkdown, titleKey } from "./credits";
@@ -19,7 +19,7 @@ export async function generateProjectCredits(db: Db, projectId: string): Promise
     .select({ id: users.id, name: users.name, handle: users.handle, role: memberships.role, skillId: memberships.skillId })
     .from(memberships)
     .innerJoin(users, eq(users.id, memberships.userId))
-    .where(eq(memberships.projectId, projectId))
+    .where(and(eq(memberships.projectId, projectId), ne(memberships.role, "guest")))
     .orderBy(asc(memberships.joinedAt));
   const rows = roster.map((m) => ({ ...m, label: m.skillId ? skillLabel(m.skillId) : ROLE_LABEL[m.role] }));
   const year = new Date().getFullYear();

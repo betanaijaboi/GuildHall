@@ -21,7 +21,7 @@ export default async function GddPage({ params, searchParams }: { params: Promis
   const { slug, pageId } = await params;
   const { edit } = await searchParams;
   const user = await requireUser();
-  const { project, role } = await loadProject(slug, user, "guest");
+  const { project, role } = await loadProject(slug, user, "contractor");
   if (!/^[0-9a-f-]{36}$/.test(pageId)) notFound();
   await ensureGdd(db, project.id, user.id);
   const all = await db.select().from(gddPages).where(eq(gddPages.projectId, project.id));

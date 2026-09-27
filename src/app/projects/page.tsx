@@ -55,7 +55,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
           <ul className="stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {mine.map(({ project, role }) => (
               <li key={project.id}>
-                <Link href={`/p/${project.slug}/workspace/general`} className="card card-hover flex items-center gap-3">
+                <Link href={`/p/${project.slug}/workspace`} className="card card-hover flex items-center gap-3">
                   <ProjectCrest slug={project.slug} name={project.name} size={44} />
                   <div className="min-w-0">
                     <div className="truncate font-display font-semibold">{project.name}</div>

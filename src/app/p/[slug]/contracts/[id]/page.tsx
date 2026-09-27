@@ -24,7 +24,7 @@ export default async function ContractPage({ params, searchParams }: { params: P
   const { slug, id } = await params;
   const { funded } = await searchParams;
   const user = await requireUser();
-  const { project, role } = await loadProject(slug, user, "guest");
+  const { project, role } = await loadProject(slug, user, "contractor");
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const [e] = await db.select().from(engagements).where(and(eq(engagements.id, id), eq(engagements.projectId, project.id))).limit(1);
   if (!e || (e.clientId !== user.id && e.makerId !== user.id && !roleAtLeast(role, "lead"))) notFound();

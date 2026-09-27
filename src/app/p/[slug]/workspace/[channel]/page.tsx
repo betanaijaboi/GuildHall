@@ -2,18 +2,19 @@ import { and, asc, count, desc, eq, inArray, isNull, max } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { channels, gddPages, messages, messageVotes, projectRepos, users } from "@/db/schema";
+import { gddPages, messages, messageVotes, projectRepos, users } from "@/db/schema";
 import { ForumBoard, TopicHeader, type TopicCard } from "@/components/forum";
 import { sortTopics, type TopicSort } from "@/lib/forum";
 import { sendMessage } from "@/app/actions/workspace";
-import { BookOpen, Hash, MessagesSquare, Rocket, X } from "lucide-react";
+import { BookOpen, Hash, Link2, MessagesSquare, Rocket, X } from "lucide-react";
 import { Avatar, BotAvatar } from "@/components/avatar";
 import { GithubIcon } from "@/components/icons";
 import { ChatComposer } from "@/components/chat-composer";
 import { LiveRefresh } from "@/components/live-refresh";
 import { MessageCardView } from "@/components/message-card";
 import { loadProject, roleAtLeast } from "@/lib/access";
-import { createDefaultChannels, DEFAULT_CHANNELS } from "@/lib/messages";
+import { createDefaultChannels } from "@/lib/messages";
+import { channelSegment, sortChannels, visibleChannels } from "@/lib/channel-access";
 import { requireUser } from "@/lib/auth";
 import { githubConfigured } from "@/lib/env";
 
@@ -33,9 +34,9 @@ export default async function ChannelPage({
   // Projects created before a default channel existed (e.g. #proposals) get it on first visit.
   await createDefaultChannels(db, project.id);
 
-  const order = (name: string) => { const i = DEFAULT_CHANNELS.findIndex((c) => c.name === name); return i < 0 ? 99 : i; };
-  const allChannels = (await db.select().from(channels).where(eq(channels.projectId, project.id)).orderBy(asc(channels.createdAt))).sort((a, b) => order(a.name) - order(b.name));
-  const channel = allChannels.find((c) => c.name === channelName);
+  // Guests see only granted channels; members also see channels shared in from partner projects (C15).
+  const allChannels = sortChannels(await visibleChannels(db, project.id, user.id, role!));
+  const channel = allChannels.find((c) => channelSegment(c) === channelName);
   if (!channel) notFound();
 
   // Latest 100 top-level messages, shown oldest → newest.
@@ -110,11 +111,11 @@ export default async function ChannelPage({
         .orderBy(asc(messages.createdAt))
     : [];
 
-  const [pinned] = channel.pinnedPageId
+  const [pinned] = channel.pinnedPageId && !channel.sharedFrom && role !== "guest"
     ? await db.select({ id: gddPages.id, title: gddPages.title, emoji: gddPages.emoji }).from(gddPages).where(eq(gddPages.id, channel.pinnedPageId)).limit(1)
     : [];
   const send = sendMessage.bind(null, slug);
-  const base = `/p/${slug}/workspace/${channel.name}`;
+  const base = `/p/${slug}/workspace/${channelSegment(channel)}`;
 
   return (
     <div className={`grid gap-4 ${threadRoot ? "md:grid-cols-[180px_1fr_340px]" : "md:grid-cols-[180px_1fr]"}`}>
@@ -125,13 +126,15 @@ export default async function ChannelPage({
           {allChannels.map((c) => (
             <li key={c.id}>
               <Link
-                href={`/p/${slug}/workspace/${c.name}`}
+                href={`/p/${slug}/workspace/${channelSegment(c)}`}
+                title={c.sharedFrom ? `Shared from ${c.sharedFrom}` : undefined}
                 className={`flex items-center gap-2 rounded-xl px-3 py-2 transition-colors ${
                   c.id === channel.id ? "bg-gradient-to-r from-violet-500/20 to-cyan-500/5 font-medium text-fg" : "text-fg-muted hover:bg-muted hover:text-fg"
                 }`}
               >
                 <ChannelIcon name={c.name} kind={c.kind} />
                 {c.name}
+                {c.sharedFrom && <Link2 size={12} className="text-cyan-400" aria-label="shared channel" />}
               </Link>
             </li>
           ))}
@@ -142,6 +145,8 @@ export default async function ChannelPage({
         <div className="flex items-center gap-2 border-b border-border px-5 py-3">
           <ChannelIcon name={channel.name} kind={channel.kind} />
           <span className="font-display font-semibold">{channel.name}</span>
+          {channel.sharedFrom && <span className="chip chip-tint"><Link2 size={11} /> shared with {channel.sharedFrom}</span>}
+          {role === "guest" && <span className="chip">guest access</span>}
           {channel.kind === "github" && <span className="text-xs text-fg-muted">activity from linked repos</span>}
           {channel.kind === "forum" && <span className="text-xs text-fg-muted">proposals and ideas, voted by the party</span>}
           {pinned && (
@@ -150,7 +155,7 @@ export default async function ChannelPage({
           <span className="ml-auto flex items-center gap-2 text-xs text-fg-muted"><span className="live-dot" /> Live</span>
         </div>
         {channel.kind === "forum" ? (
-          <ForumBoard slug={slug} channel={channel} topics={shownTopics} filters={{ tag, status, sort }} />
+          <ForumBoard slug={slug} channel={{ id: channel.id, name: channelSegment(channel) }} topics={shownTopics} filters={{ tag, status, sort }} />
         ) : (
         <>
         <ol className="flex-1 space-y-1 overflow-y-auto p-3">
