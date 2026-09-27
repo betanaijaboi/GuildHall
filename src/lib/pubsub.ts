@@ -20,3 +20,26 @@ export function subscribe(channelId: string, fn: (e: ChannelEvent) => void): () 
   bus.on(key, fn);
   return () => bus.off(key, fn);
 }
+
+// --- Huddles (C5): signalling and presence ------------------------------------------------------
+
+export type HuddleEvent =
+  | { type: "presence"; participants: { id: string; name: string; handle: string }[] }
+  | { type: "signal"; from: string; kind: "offer" | "answer" | "ice"; data: unknown }
+  | { type: "state"; from: string; session: string; mic: boolean; cam: boolean; screen: boolean }
+  | { type: "draw"; from: string; data: unknown }
+  | { type: "caption"; from: string; name: string; text: string }
+  | { type: "notes"; from: string; text: string }
+  | { type: "ended"; recapUrl: string };
+
+/** Broadcast to everyone in the huddle (`to` omitted) or deliver to one participant. */
+export function publishHuddle(huddleId: string, event: HuddleEvent, to?: string): void {
+  bus.emit(to ? `huddle:${huddleId}:${to}` : `huddle:${huddleId}`, event);
+}
+
+/** Receive broadcasts plus events addressed to `userId`. */
+export function subscribeHuddle(huddleId: string, userId: string, fn: (e: HuddleEvent) => void): () => void {
+  const keys = [`huddle:${huddleId}`, `huddle:${huddleId}:${userId}`];
+  for (const k of keys) bus.on(k, fn);
+  return () => keys.forEach((k) => bus.off(k, fn));
+}

@@ -113,6 +113,13 @@
       "when": 1790517749972,
       "tag": "0015_guests_shared_channels",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1790518513104,
+      "tag": "0016_huddles",
+      "breakpoints": true
     }
   ]
 }

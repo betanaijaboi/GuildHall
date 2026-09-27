@@ -6,7 +6,9 @@ import { gddPages, messages, messageVotes, projectRepos, users } from "@/db/sche
 import { ForumBoard, TopicHeader, type TopicCard } from "@/components/forum";
 import { sortTopics, type TopicSort } from "@/lib/forum";
 import { sendMessage } from "@/app/actions/workspace";
-import { BookOpen, Hash, Link2, MessagesSquare, Rocket, X } from "lucide-react";
+import { startHuddleAction } from "@/app/actions/huddles";
+import { activeHuddle, activeParticipants } from "@/lib/huddles-db";
+import { BookOpen, Hash, Headphones, Link2, MessagesSquare, Rocket, X } from "lucide-react";
 import { Avatar, BotAvatar } from "@/components/avatar";
 import { GithubIcon } from "@/components/icons";
 import { ChatComposer } from "@/components/chat-composer";
@@ -114,6 +116,9 @@ export default async function ChannelPage({
   const [pinned] = channel.pinnedPageId && !channel.sharedFrom && role !== "guest"
     ? await db.select({ id: gddPages.id, title: gddPages.title, emoji: gddPages.emoji }).from(gddPages).where(eq(gddPages.id, channel.pinnedPageId)).limit(1)
     : [];
+  // Huddles (C5): one live call per chat channel.
+  const live = channel.kind === "chat" ? await activeHuddle(db, channel.id) : null;
+  const inCall = live ? await activeParticipants(db, live.id) : [];
   const send = sendMessage.bind(null, slug);
   const base = `/p/${slug}/workspace/${channelSegment(channel)}`;
 
@@ -152,7 +157,20 @@ export default async function ChannelPage({
           {pinned && (
             <Link href={`/p/${slug}/gdd/${pinned.id}`} className="chip ml-2 hover:border-accent"><BookOpen size={11} /> {pinned.emoji} {pinned.title}</Link>
           )}
-          <span className="ml-auto flex items-center gap-2 text-xs text-fg-muted"><span className="live-dot" /> Live</span>
+          <span className="ml-auto flex items-center gap-3 text-xs text-fg-muted">
+            {live ? (
+              <Link href={`/huddle/${live.id}`} className="flex items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1.5 text-sm font-medium text-emerald-400 ring-1 ring-emerald-400/40 transition hover:bg-emerald-500/25">
+                <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" /></span>
+                <Headphones size={14} /> Join huddle
+                {inCall.length > 0 && <span className="flex -space-x-1.5">{inCall.slice(0, 3).map((p) => <span key={p.id} className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-surface text-[10px] ring-1 ring-emerald-400/50" title={p.name}>{p.name[0]}</span>)}</span>}
+              </Link>
+            ) : channel.kind === "chat" ? (
+              <form action={startHuddleAction.bind(null, slug, channel.id)}>
+                <button className="btn-secondary py-1 text-xs" title="Start a voice/video huddle in this channel"><Headphones size={14} /> Huddle</button>
+              </form>
+            ) : null}
+            <span className="flex items-center gap-2"><span className="live-dot" /> Live</span>
+          </span>
         </div>
         {channel.kind === "forum" ? (
           <ForumBoard slug={slug} channel={{ id: channel.id, name: channelSegment(channel) }} topics={shownTopics} filters={{ tag, status, sort }} />

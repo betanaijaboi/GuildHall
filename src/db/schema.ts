@@ -155,7 +155,7 @@ export const channels = pgTable(
 
 /** A card attached to a message, e.g. a GitHub PR or issue. Rendered by the client. */
 export type MessageCard = {
-  kind: "pull_request" | "issue" | "push" | "release" | "check" | "digest" | "asset";
+  kind: "pull_request" | "issue" | "push" | "release" | "check" | "digest" | "asset" | "huddle";
   title: string;
   url?: string;
   repo?: string;
@@ -733,3 +733,51 @@ export const channelShareCodes = pgTable("channel_share_codes", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
 });
+
+// --- Huddles + recaps (C5) ----------------------------------------------------------------------
+
+export type HuddleAction = { title: string; owner: string | null; taskId?: string };
+export type HuddleRecap = { summary: string; decisions: string[]; actions: HuddleAction[]; source: "ai" | "rules" };
+
+/** A live voice/video call in a channel. At most one active huddle per channel. */
+export const huddles = pgTable(
+  "huddles",
+  {
+    id: id(),
+    channelId: uuid("channel_id").notNull().references(() => channels.id, { onDelete: "cascade" }),
+    startedBy: uuid("started_by").references(() => users.id, { onDelete: "set null" }),
+    startedAt: createdAt(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    /** Shared notes typed during the call. */
+    notes: text("notes").notNull().default(""),
+    recap: jsonb("recap").$type<HuddleRecap>(),
+    recapMessageId: uuid("recap_message_id"),
+  },
+  (t) => [uniqueIndex("huddles_one_active_idx").on(t.channelId).where(sql`${t.endedAt} is null`)],
+);
+
+export const huddleParticipants = pgTable(
+  "huddle_participants",
+  {
+    huddleId: uuid("huddle_id").notNull().references(() => huddles.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+    leftAt: timestamp("left_at", { withTimezone: true }),
+    /** Open event-stream connections; a participant has left when this reaches 0. */
+    connections: integer("connections").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.huddleId, t.userId] })],
+);
+
+/** Opt-in live captions (transcribed in each speaker's own browser), used for the recap. */
+export const huddleCaptions = pgTable(
+  "huddle_captions",
+  {
+    id: id(),
+    huddleId: uuid("huddle_id").notNull().references(() => huddles.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    text: text("text").notNull(),
+    at: createdAt(),
+  },
+  (t) => [index("huddle_captions_idx").on(t.huddleId, t.at)],
+);
