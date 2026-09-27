@@ -116,3 +116,17 @@ export function RedeemForm({ action }: { action: Action }) {
     </form>
   );
 }
+
+export function FeedbackKeyForm({ action, endpoint }: { action: Action; endpoint: string }) {
+  const [state, submit, pending] = useActionState(action, {});
+  return (
+    <form action={submit} className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <input name="label" required maxLength={60} placeholder='e.g. "Steam demo build"' className="input w-auto flex-1" aria-label="Key name" />
+        <button className="btn-secondary" disabled={pending}><KeyRound size={15} /> Create key</button>
+      </div>
+      {state.error && <p className="text-sm text-bad">{state.error}</p>}
+      {state.secret && <CopyBox value={state.secret} hint={`Put this in your build's reporter and POST to ${endpoint}. It's shown only once; anyone with it can send reports, so revoke it if it leaks.`} />}
+    </form>
+  );
+}

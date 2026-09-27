@@ -1,7 +1,8 @@
+import { FlaskConical } from "lucide-react";
 import { and, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/db";
-import { applications, memberships, milestones, posts, roleListings, users } from "@/db/schema";
+import { applications, memberships, milestones, playtests, posts, roleListings, users } from "@/db/schema";
 import { applyToListing } from "@/app/actions/project";
 import { Avatar } from "@/components/avatar";
 import { SkillChip } from "@/components/discipline";
@@ -40,6 +41,7 @@ export default async function ProjectPublicPage({
       ? db.select({ listingId: applications.listingId, status: applications.status }).from(applications).where(eq(applications.userId, user.id))
       : Promise.resolve([]),
   ]);
+  const openTests = await db.select().from(playtests).where(and(eq(playtests.projectId, project.id), eq(playtests.open, true))).orderBy(desc(playtests.createdAt)).limit(2);
   const appliedTo = new Map(myApplications.map((a) => [a.listingId, a.status]));
   const done = milestone ? milestone.checklist.filter((c) => c.done).length : 0;
 
@@ -53,6 +55,17 @@ export default async function ProjectPublicPage({
           {project.genres.map((g) => <span key={g} className="chip">{g}</span>)}
           <span className="chip">{labelFor(ENGAGEMENTS, project.engagement)}</span>
         </div>
+
+        {openTests.map((pt) => (
+          <Link key={pt.id} href={`/p/${slug}/playtest/${pt.id}`} className="card card-hover flex items-center gap-4 border-violet-400/30 bg-gradient-to-r from-violet-500/10 to-cyan-500/5">
+            <span className="flex h-12 w-12 shrink-0 animate-[bob_2.4s_ease-in-out_infinite] items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-cyan-400 text-white shadow-lg shadow-violet-500/30"><FlaskConical size={22} /></span>
+            <span className="flex-1">
+              <span className="block font-display font-semibold">Playtest open: {pt.title}</span>
+              <span className="block text-sm text-fg-muted">Play the latest build and tell the team what you think.</span>
+            </span>
+            <span className="btn shrink-0">Join</span>
+          </Link>
+        ))}
 
         <section>
           <h2 className="h2 mb-3">Open roles</h2>

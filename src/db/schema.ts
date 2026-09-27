@@ -849,3 +849,72 @@ export const jamRequests = pgTable(
   },
   (t) => [primaryKey({ columns: [t.teamId, t.userId] })],
 );
+
+// --- Playtests + player feedback (C8/C9) ----------------------------------------------------------
+
+export type PlaytestQuestion = { id: string; kind: "rating" | "text" | "choice"; prompt: string; options: string[] };
+
+export const playtests = pgTable("playtests", {
+  id: id(),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  /** Build to play. Empty = use the latest GitHub release posted to the project. */
+  buildUrl: text("build_url"),
+  questions: jsonb("questions").$type<PlaytestQuestion[]>().notNull().default(sql`'[]'::jsonb`),
+  maxTesters: integer("max_testers").notNull().default(50),
+  open: boolean("open").notNull().default(true),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+});
+
+export const playtestTesters = pgTable(
+  "playtest_testers",
+  {
+    playtestId: uuid("playtest_id").notNull().references(() => playtests.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    platform: text("platform").notNull().default(""),
+    joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.playtestId, t.userId] })],
+);
+
+export const feedbackSourceEnum = pgEnum("feedback_source", ["form", "sdk", "discord"]);
+export const feedbackKindEnum = pgEnum("feedback_kind", ["bug", "feedback", "idea"]);
+export const feedbackStatusEnum = pgEnum("feedback_status", ["new", "issue", "task", "dismissed"]);
+
+export const feedbackReports = pgTable(
+  "feedback_reports",
+  {
+    id: id(),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    playtestId: uuid("playtest_id").references(() => playtests.id, { onDelete: "set null" }),
+    source: feedbackSourceEnum("source").notNull(),
+    kind: feedbackKindEnum("kind").notNull().default("feedback"),
+    reporterId: uuid("reporter_id").references(() => users.id, { onDelete: "set null" }),
+    reporterName: text("reporter_name").notNull().default(""),
+    title: text("title").notNull(),
+    body: text("body").notNull().default(""),
+    answers: jsonb("answers").$type<Record<string, string | number>>().notNull().default(sql`'{}'::jsonb`),
+    build: text("build").notNull().default(""),
+    platform: text("platform").notNull().default(""),
+    screenshotKey: text("screenshot_key"),
+    screenshotMime: text("screenshot_mime"),
+    status: feedbackStatusEnum("status").notNull().default("new"),
+    issueUrl: text("issue_url"),
+    taskId: uuid("task_id"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("feedback_project_idx").on(t.projectId, t.createdAt)],
+);
+
+/** Keys a game build uses to send in-game reports. Stored hashed; shown once. */
+export const feedbackKeys = pgTable("feedback_keys", {
+  keyHash: text("key_hash").primaryKey(),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  prefix: text("prefix").notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  createdAt: createdAt(),
+});

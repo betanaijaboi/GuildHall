@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, BookOpen, FileSignature, Flag, ImageIcon, ListTodo, MessagesSquare, Newspaper, Settings, Users, Workflow, Zap } from "lucide-react";
+import { BarChart3, FlaskConical, BookOpen, FileSignature, Flag, ImageIcon, ListTodo, MessagesSquare, Newspaper, Settings, Users, Workflow, Zap } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -13,6 +13,7 @@ const TABS = [
   { href: "milestones", match: "milestones", label: "Quest log", icon: Flag },
   { href: "roles", match: "roles", label: "Party", icon: Users },
   { href: "contracts", match: "contracts", label: "Contracts", icon: FileSignature },
+  { href: "playtests", match: "playtest", label: "Playtests", icon: FlaskConical },
   { href: "updates", match: "updates", label: "Devlog", icon: Newspaper },
   { href: "digest", match: "digest", label: "Digest", icon: BarChart3 },
   { href: "automations", match: "automations", label: "Automations", icon: Zap },

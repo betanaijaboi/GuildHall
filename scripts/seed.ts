@@ -16,7 +16,7 @@ import { eq } from "drizzle-orm";
 const url = process.env.DATABASE_URL ?? "postgres://guildhall:guildhall@localhost:5432/guildhall";
 const client = postgres(url, { max: 1, onnotice: () => {} });
 const db = drizzle(client, { schema });
-const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes, gddPages, gddLinks, channels, channelAccess, channelLinks, jams, jamSeekers } = schema;
+const { users, profileSkills, projects, memberships, roleListings, milestones, posts, githubInstallations, projectRepos, portfolioItems, applications, pipelineItems, tasks, gigs, gigTiers, gigAddons, credits, messages, messageVotes, gddPages, gddLinks, channels, channelAccess, channelLinks, jams, jamSeekers, playtests, playtestTesters, feedbackReports } = schema;
 
 await client`truncate users, projects, github_installations, github_deliveries restart identity cascade`;
 
@@ -266,6 +266,20 @@ await db.insert(jamSeekers).values([
   { jamId: tinyJam.id, userId: ids.rafael, note: "Composer looking for a moody little game to score.", skills: ["audio.composition", "audio.sound_design"] },
 ]);
 void jamTeam;
+
+// C8/C9: an open Tidebound playtest with a few responses and an in-game bug report.
+const { parseQuestions } = await import("../src/lib/feedback");
+const [slicePlaytest] = await db.insert(playtests).values({
+  projectId: tide.id, title: "Vertical slice playtest", createdBy: ids.amara, maxTesters: 40,
+  description: "About 20 minutes: sail out of the harbour, survive the first storm, find the lighthouse.",
+  questions: parseQuestions("rating: How fun was sailing through the storm?\ntext: Where did you get stuck or confused?\nchoice: Would you wishlist Tidebound? | Yes | Maybe | No"),
+}).returning();
+const testers = [["priya", 4, "The lighthouse puzzle hint", "Yes"], ["jonas", 5, "", "Yes"], ["elena", 3, "Couldn't tell which sail was raised", "Maybe"]] as const;
+for (const [h, fun, stuck, wish] of testers) {
+  await db.insert(playtestTesters).values({ playtestId: slicePlaytest.id, userId: ids[h], platform: "Windows" });
+  await db.insert(feedbackReports).values({ projectId: tide.id, playtestId: slicePlaytest.id, source: "form", kind: "feedback", reporterId: ids[h], reporterName: people.find((p) => p.handle === h)!.name, title: "Vertical slice playtest feedback", body: stuck ? `Got stuck: ${stuck}` : "Great vibe, the storm music is fantastic.", answers: { q1: fun, ...(stuck ? { q2: stuck } : {}), q3: wish }, platform: "Windows" });
+}
+await db.insert(feedbackReports).values({ projectId: tide.id, source: "sdk", kind: "bug", reporterName: "Sam (itch player)", title: "Boat clips through the dock at high speed", body: "Happened twice near the lighthouse pier when boosting.", build: "0.3.2", platform: "Windows 11" });
 
 await client.end();
 console.log(`seeded ${people.length} people, 2 projects, ${hooks.length} webhook deliveries`);
